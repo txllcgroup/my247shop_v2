@@ -22,7 +22,7 @@ export default function DashboardHome() {
   const { width, height } = useWindowSize();
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [subscriptionStep, setSubscriptionStep] = useState<'choose' | 'pay-per-tx-success' | 'monthly-success'>('choose');
-  
+
   const [summary, setSummary] = useState<OrderSummary | null>(null);
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [profile, setProfile] = useState<any>(null);
@@ -39,7 +39,7 @@ export default function DashboardHome() {
         setShowSubscriptionModal(true);
       }
     }, 500);
-    
+
     const storedProfile = localStorage.getItem('profile');
     if (storedProfile) {
       setProfile(JSON.parse(storedProfile));
@@ -146,7 +146,7 @@ export default function DashboardHome() {
                     'Returned': 'text-gray-700 bg-gray-50 border-gray-200'
                   };
                   return (
-                    <tr key={order.id} onClick={() => window.location.href=`/dashboard/orders/${order.id}`} className="border-b border-gray-50/50 hover:bg-gray-50/50 transition-colors last:border-0 cursor-pointer group">
+                    <tr key={order.id} onClick={() => window.location.href = `/dashboard/orders/${order.id}`} className="border-b border-gray-50/50 hover:bg-gray-50/50 transition-colors last:border-0 cursor-pointer group">
                       <td className="px-6 py-4 font-semibold text-black group-hover:text-blue-600 transition-colors">{order.orderNumber}</td>
                       <td className="px-6 py-4 text-gray-500 font-medium">
                         {new Date(order.placedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
@@ -239,7 +239,7 @@ export default function DashboardHome() {
 
                   <div className="space-y-3">
                     <button
-                      onClick={() => initializePayment({ onSuccess: handleMonthlySuccess, onClose: () => {} })}
+                      onClick={() => initializePayment({ onSuccess: handleMonthlySuccess, onClose: () => { } })}
                       className="w-full flex items-center justify-between p-4 rounded-2xl border-2 border-black bg-black text-white hover:bg-gray-800 hover:border-gray-800 transition-all group"
                     >
                       <div className="flex flex-col items-start gap-0.5">

@@ -3,8 +3,8 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
-const Joyride = dynamic(() => import('react-joyride'), { ssr: false });
-import { CallBackProps, STATUS, Step } from 'react-joyride';
+const Joyride = dynamic(() => import('@list-labs/react-joyride'), { ssr: false });
+import { CallBackProps, STATUS, Step } from '@list-labs/react-joyride';
 import { AuthGuard } from '@/components/AuthGuard';
 import { LoginService } from '../login/loginService';
 
