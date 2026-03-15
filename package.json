@@ -15,8 +15,15 @@
     "react-confetti": "^6.4.0",
     "react-dom": "19.2.3",
     "@list-labs/react-joyride": "^2.9.4",
-    "react-paystack": "^6.0.0",
+    "react-paystack-19": "^6.0.0",
     "react-use": "^17.6.0"
+  },
+  "overrides": {
+    "react-floater": "^0.10.0",
+    "react-paystack-19": {
+      "react": "$react",
+      "react-dom": "$react-dom"
+    }
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

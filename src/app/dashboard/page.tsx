@@ -4,7 +4,7 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 const Confetti = dynamic(() => import('react-confetti'), { ssr: false });
 import { useWindowSize } from 'react-use';
-import { usePaystackPayment } from 'react-paystack';
+import { usePaystackPayment } from 'react-paystack-19';
 import { OrderService, Order, OrderSummary } from './orders/orderService';
 
 const SummaryCard = ({ title, value }: any) => (
