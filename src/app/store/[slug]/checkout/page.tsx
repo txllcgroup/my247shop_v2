@@ -43,7 +43,7 @@ const FloatingInput = ({ label, type = "text", id, value, onChange, placeholder 
   );
 };
 
-import { usePaystackPayment } from 'react-paystack';
+import { usePaystackPayment } from 'react-paystack-19';
 
 export default function CheckoutPage() {
   const params = useParams();
