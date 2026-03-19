@@ -29,6 +29,35 @@ export default function DashboardLayout({
   const [runTutorial, setRunTutorial] = useState(false);
   const [profile, setProfile] = useState<any>(null);
 
+  const steps: Step[] = React.useMemo(() => [
+    {
+      target: '.tour-step-menu',
+      content: 'Here is your main navigation menu where you can access orders, products, customers, and more.',
+      placement: 'right',
+      disableBeacon: true,
+    },
+    {
+      target: '.tour-step-settings',
+      content: 'Manage your store details and account settings here.',
+      placement: 'right',
+    },
+    {
+      target: '.tour-step-profile',
+      content: 'Quick view of your active profile and current billing plan.',
+      placement: 'right',
+    },
+    {
+      target: '.tour-step-add-product',
+      content: 'Ready to sell? Use this quick action button to list your first product!',
+      placement: 'bottom',
+    },
+    {
+      target: '.tour-step-main-content',
+      content: 'Your dashboard overview. Track your sales, view recent orders, and get AI-powered suggestions here.',
+      placement: 'center',
+    }
+  ], []);
+
   useEffect(() => {
     const storedProfile = localStorage.getItem('profile');
     if (storedProfile) {
@@ -65,34 +94,6 @@ export default function DashboardLayout({
     }
   };
 
-  const steps: Step[] = [
-    {
-      target: '.tour-step-menu',
-      content: 'Here is your main navigation menu where you can access orders, products, customers, and more.',
-      placement: 'right',
-      disableBeacon: true,
-    },
-    {
-      target: '.tour-step-settings',
-      content: 'Manage your store details and account settings here.',
-      placement: 'right',
-    },
-    {
-      target: '.tour-step-profile',
-      content: 'Quick view of your active profile and current billing plan.',
-      placement: 'right',
-    },
-    {
-      target: '.tour-step-add-product',
-      content: 'Ready to sell? Use this quick action button to list your first product!',
-      placement: 'bottom',
-    },
-    {
-      target: '.tour-step-main-content',
-      content: 'Your dashboard overview. Track your sales, view recent orders, and get AI-powered suggestions here.',
-      placement: 'center',
-    }
-  ];
 
   return (
     <AuthGuard>

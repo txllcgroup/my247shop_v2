@@ -103,7 +103,7 @@ export default function DashboardHome() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
-        <SummaryCard title="Total Revenue" value={summary ? `₦${summary.totalRevenue.toLocaleString()}` : "₦0.00"} />
+        <SummaryCard title="Total Revenue" value={summary ? `₦${(summary.totalRevenue || 0).toLocaleString()}` : "₦0.00"} />
         <SummaryCard title="Total Orders" value={summary?.totalOrders || 0} />
         <SummaryCard title="Pending Orders" value={summary?.pendingOrders || 0} />
         <SummaryCard title="Processing" value={summary?.processingOrders || 0} />
@@ -149,7 +149,7 @@ export default function DashboardHome() {
                     <tr key={order.id} onClick={() => window.location.href = `/dashboard/orders/${order.id}`} className="border-b border-gray-50/50 hover:bg-gray-50/50 transition-colors last:border-0 cursor-pointer group">
                       <td className="px-6 py-4 font-semibold text-black group-hover:text-blue-600 transition-colors">{order.orderNumber}</td>
                       <td className="px-6 py-4 text-gray-500 font-medium">
-                        {new Date(order.placedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                        {order.placedAt ? new Date(order.placedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'N/A'}
                       </td>
                       <td className="px-6 py-4 font-medium text-black truncate max-w-[150px]">{order.customerEmail}</td>
                       <td className="px-6 py-4">
@@ -157,7 +157,7 @@ export default function DashboardHome() {
                           {order.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 font-semibold text-black text-right">{order.currency} {order.totalAmount.toLocaleString()}</td>
+                      <td className="px-6 py-4 font-semibold text-black text-right">{order.currency} {(order.totalAmount || 0).toLocaleString()}</td>
                     </tr>
                   );
                 })}

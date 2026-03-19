@@ -9,12 +9,14 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@list-labs/react-joyride": "^2.9.4",
+    "@tailwindcss/oxide": "^4.2.1",
     "framer-motion": "^12.36.0",
+    "lightningcss": "^1.32.0",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-confetti": "^6.4.0",
     "react-dom": "19.2.3",
-    "@list-labs/react-joyride": "^2.9.4",
     "react-paystack-19": "^6.0.0",
     "react-use": "^17.6.0"
   },

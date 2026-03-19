@@ -6,12 +6,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ProductService, ProductData, ProductVariant } from '../productService';
 
 import { useWindowSize } from 'react-use';
-import Confetti from 'react-confetti';
+import dynamic from 'next/dynamic';
+const Confetti = dynamic(() => import('react-confetti'), { ssr: false });
 
 const ProgressBar = ({ currentStep, totalSteps }: { currentStep: number, totalSteps: number }) => {
   const percentage = ((currentStep + 1) / totalSteps) * 100;
   return (
-    <div className="w-full h-1 bg-gray-200 fixed bottom-[88px] left-0 md:left-[280px] md:w-[calc(100%-280px)] z-50">
+    <div className="w-full h-1 bg-gray-200 fixed bottom-[104px] md:bottom-[88px] left-0 md:left-[280px] md:w-[calc(100%-280px)] z-50">
       <div
         className="h-full bg-black transition-all duration-500 ease-in-out"
         style={{ width: `${percentage}%` }}
@@ -526,7 +527,7 @@ export default function AddProductPage() {
       <ProgressBar currentStep={step} totalSteps={steps.length} />
 
       {/* Footer Bar */}
-      <footer className="fixed bottom-0 left-0 right-0 md:ml-[280px] bg-white/80 backdrop-blur-md border-t-2 border-gray-100 p-6 md:p-8 z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.02)]">
+      <footer className="fixed bottom-[84px] md:bottom-0 left-0 right-0 md:ml-[280px] bg-white/80 backdrop-blur-md border-t-2 border-gray-100 p-4 md:p-8 z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.02)]">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="hidden sm:block">
             {error ? (
