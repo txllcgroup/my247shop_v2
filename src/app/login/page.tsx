@@ -189,6 +189,7 @@ export default function LoginFlow() {
         localStorage.setItem('phone', profile.phone);
         localStorage.setItem('role', profile.role);
         localStorage.setItem('isEmailVerified', String(profile.isEmailVerified));
+        localStorage.setItem('country', profile.country);
 
         // Final Login Action (redirect to dashboard)
         window.location.href = "/dashboard";

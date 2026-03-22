@@ -43,6 +43,14 @@ const FloatingInput = ({ label, type = "text", id, value = "", onChange, placeho
   );
 };
 
+const getCurrencySymbol = (currency?: string) => {
+  if (currency === 'NGN') return '₦';
+  if (currency === 'USD') return '$';
+  if (currency === 'GBP') return '£';
+  if (currency === 'EUR') return '€';
+  return currency || '';
+};
+
 export default function WalletPage() {
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -56,6 +64,7 @@ export default function WalletPage() {
   const [page, setPage] = useState(1);
   const [totalTransactions, setTotalTransactions] = useState(0);
   const [actionLoading, setActionLoading] = useState(false);
+  const [currency, setCurrency] = useState('NGN');
 
   const fetchData = async () => {
     setLoading(true);
@@ -63,6 +72,11 @@ export default function WalletPage() {
     try {
       const storeId = localStorage.getItem('storeId') || '';
       if (!storeId) throw new Error('Store ID not found');
+
+      const country = localStorage.getItem('country');
+      if (country) {
+        setCurrency(country === 'Nigeria' ? 'NGN' : 'USD');
+      }
 
       const [walletRes, transRes, banksRes] = await Promise.all([
         WalletService.getWallet(storeId),
@@ -186,11 +200,11 @@ export default function WalletPage() {
             <div className="relative z-10">
                <span className="text-lg font-semibold text-gray-500 mb-2 md:mb-4 block">Settled Balance</span>
                <div className="text-5xl md:text-7xl font-semibold tracking-tight text-black">
-                 {wallet?.currency} {wallet?.settledBalance?.toLocaleString() || '0.00'}
+                 {currency} {wallet?.settledBalance?.toLocaleString() || '0.00'}
                </div>
                <div className="mt-4 flex items-center gap-2 text-amber-600 font-bold">
                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                 Pending: {wallet?.currency} {wallet?.pendingBalance?.toLocaleString() || '0.00'}
+                 Pending: {currency} {wallet?.pendingBalance?.toLocaleString() || '0.00'}
                </div>
             </div>
             
@@ -210,7 +224,7 @@ export default function WalletPage() {
                        label="Withdrawal Amount" 
                        type="number" 
                        id="amount" 
-                       prefix={wallet?.currency === 'NGN' ? '₦' : '$'} 
+                       prefix={getCurrencySymbol(currency)} 
                        placeholder="0.00" 
                      />
                      <div className="flex gap-3">
@@ -274,7 +288,7 @@ export default function WalletPage() {
                    <span className="text-2xl font-semibold text-black">Net Lifetime</span>
                 </div>
                 <div className="bg-white px-5 py-3 rounded-xl border-2 border-gray-200 shadow-sm">
-                   <span className="text-xl font-bold text-black">{wallet?.currency} {wallet?.totalEarnings?.toLocaleString() || '0.00'}</span>
+                   <span className="text-xl font-bold text-black">{currency} {wallet?.totalEarnings?.toLocaleString() || '0.00'}</span>
                 </div>
             </div>
          </div>
@@ -325,7 +339,7 @@ export default function WalletPage() {
                         </span>
                      </td>
                      <td className={`px-6 py-5 text-right font-bold text-xl whitespace-nowrap ${tx.type === 'Credit' ? 'text-black' : 'text-gray-500'}`}>
-                        {tx.type === 'Credit' ? '+' : '-'}{tx.currency} {tx.amount.toLocaleString()}
+                        {tx.type === 'Credit' ? '+' : '-'}{currency} {tx.amount.toLocaleString()}
                      </td>
                      </tr>
                   ))}

@@ -258,7 +258,7 @@ export default function DashboardLayout({
             { name: 'Orders', href: '/dashboard/orders', icon: navItems[1].icon },
             { name: 'Products', href: '/dashboard/products', icon: navItems[2].icon },
             { name: 'Wallet', href: '/dashboard/wallet', icon: navItems[5].icon },
-            { name: 'Menu', href: '/dashboard/settings', icon: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg> },
+            { name: 'Ai tools', href: '/dashboard/ai-tools', icon: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg> },
           ].map((item) => {
             const isActive = pathname === item.href;
             return (

@@ -14,6 +14,7 @@ export interface LoginResponse {
     isEmailVerified: boolean;
     storeId: string;
     storeName: string;
+    country: string;
   };
 }
 
@@ -38,6 +39,15 @@ export class LoginService {
   static logout() {
     localStorage.removeItem('token');
     localStorage.removeItem('profile');
+    localStorage.removeItem('storeId');
+    localStorage.removeItem('storeName');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('email');
+    localStorage.removeItem('fullName');
+    localStorage.removeItem('phone');
+    localStorage.removeItem('role');
+    localStorage.removeItem('isEmailVerified');
+    localStorage.removeItem('country');
     window.location.href = '/login';
   }
 }

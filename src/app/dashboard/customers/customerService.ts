@@ -92,4 +92,19 @@ export class CustomerService {
 
     return await res.json();
   }
+
+  static async broadcastMessage(storeId: string, message: string) {
+    const res = await fetch(`${this.BASE_URL}/customers/broadcast`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ storeId, message })
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to send broadcast message');
+    }
+
+    return await res.json();
+  }
 }

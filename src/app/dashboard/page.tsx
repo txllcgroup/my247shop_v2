@@ -6,6 +6,7 @@ const Confetti = dynamic(() => import('react-confetti'), { ssr: false });
 import { useWindowSize } from 'react-use';
 import { usePaystackPayment } from 'react-paystack-19';
 import { OrderService, Order, OrderSummary } from './orders/orderService';
+import { CustomerService } from './customers/customerService';
 
 const SummaryCard = ({ title, value }: any) => (
   <div className="bg-white p-6 rounded-2xl border-2 border-gray-200 flex flex-col justify-center">
@@ -18,15 +19,29 @@ const SummaryCard = ({ title, value }: any) => (
   </div>
 );
 
+const getCurrencySymbol = (currency?: string) => {
+  if (currency === 'NGN') return '₦';
+  if (currency === 'USD') return '$';
+  if (currency === 'GBP') return '£';
+  if (currency === 'EUR') return '€';
+  return currency || '';
+};
+
 export default function DashboardHome() {
   const { width, height } = useWindowSize();
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [subscriptionStep, setSubscriptionStep] = useState<'choose' | 'pay-per-tx-success' | 'monthly-success'>('choose');
+  
+  const [showBroadcastModal, setShowBroadcastModal] = useState(false);
+  const [broadcastMessage, setBroadcastMessage] = useState('');
+  const [isBroadcasting, setIsBroadcasting] = useState(false);
+  const [broadcastSuccess, setBroadcastSuccess] = useState(false);
 
   const [summary, setSummary] = useState<OrderSummary | null>(null);
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [currency, setCurrency] = useState('NGN');
 
   useEffect(() => {
     // Check subscription status
@@ -43,6 +58,11 @@ export default function DashboardHome() {
     const storedProfile = localStorage.getItem('profile');
     if (storedProfile) {
       setProfile(JSON.parse(storedProfile));
+    }
+    
+    const storedCountry = localStorage.getItem('country');
+    if (storedCountry) {
+      setCurrency(storedCountry === 'Nigeria' ? 'NGN' : 'USD');
     }
 
     const fetchData = async () => {
@@ -89,6 +109,26 @@ export default function DashboardHome() {
     setTimeout(() => setShowSubscriptionModal(false), 4000);
   };
 
+  const handleBroadcast = async () => {
+    if (!broadcastMessage.trim()) return;
+    
+    setIsBroadcasting(true);
+    try {
+      const storeId = localStorage.getItem('storeId') || '';
+      await CustomerService.broadcastMessage(storeId, broadcastMessage);
+      setBroadcastSuccess(true);
+      setBroadcastMessage('');
+      setTimeout(() => {
+        setBroadcastSuccess(false);
+        setShowBroadcastModal(false);
+      }, 3000);
+    } catch (err) {
+      console.error("Failed to send broadcast", err);
+    } finally {
+      setIsBroadcasting(false);
+    }
+  };
+
   return (
     <div className="max-w-[1400px] mx-auto space-y-8 md:space-y-12 animate-in fade-in duration-500">
 
@@ -99,11 +139,18 @@ export default function DashboardHome() {
           <p className="text-xl text-gray-500 font-medium max-w-xl leading-relaxed">Here's a breakdown of what's happening with your store today, along with some AI-driven suggestions.</p>
         </div>
 
+        <button 
+          onClick={() => setShowBroadcastModal(true)}
+          className="bg-black text-white px-8 py-4 rounded-2xl text-lg font-bold hover:bg-gray-800 transition-all shadow-xl hover:-translate-y-1 flex items-center gap-2 group whitespace-nowrap"
+        >
+          <svg className="w-5 h-5 group-hover:rotate-12 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" /></svg>
+          Broadcast Message
+        </button>
       </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
-        <SummaryCard title="Total Revenue" value={summary ? `₦${(summary.totalRevenue || 0).toLocaleString()}` : "₦0.00"} />
+        <SummaryCard title="Total Revenue" value={summary ? `${getCurrencySymbol(currency)}${(summary.totalRevenue || 0).toLocaleString()}` : `${getCurrencySymbol(currency)}0.00`} />
         <SummaryCard title="Total Orders" value={summary?.totalOrders || 0} />
         <SummaryCard title="Pending Orders" value={summary?.pendingOrders || 0} />
         <SummaryCard title="Processing" value={summary?.processingOrders || 0} />
@@ -296,6 +343,77 @@ export default function DashboardHome() {
             </div>
           </div>
         </>
+      )}
+      {/* Broadcast Modal */}
+      {showBroadcastModal && (
+        <div className="fixed inset-0 bg-black/40 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white rounded-[32px] w-full max-w-[500px] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 relative">
+            
+            {broadcastSuccess && (
+              <div className="absolute inset-0 z-[110] pointer-events-none flex items-center justify-center bg-white/90 backdrop-blur-sm animate-in fade-in duration-500">
+                <Confetti width={500} height={500} recycle={false} numberOfPieces={200} />
+                <div className="text-center">
+                  <div className="w-20 h-20 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 scale-110 animate-bounce">
+                    <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                  </div>
+                  <h2 className="text-2xl font-bold text-black">Message Sent!</h2>
+                  <p className="text-gray-500 font-medium mt-2">Your broadcast is on its way to customers.</p>
+                </div>
+              </div>
+            )}
+
+            <div className="p-8">
+              <div className="flex items-center justify-between mb-8">
+                <div>
+                  <h2 className="text-2xl font-bold text-black tracking-tight">Broadcast Message</h2>
+                  <p className="text-gray-500 font-medium text-sm mt-1">Send a notification to all your customers.</p>
+                </div>
+                <button 
+                  onClick={() => setShowBroadcastModal(false)}
+                  className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-black transition-all"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2 px-1">Message Content</label>
+                  <textarea
+                    value={broadcastMessage}
+                    onChange={(e) => setBroadcastMessage(e.target.value)}
+                    placeholder="Type your message here... e.g. 'New collection just dropped! Check it out now.'"
+                    className="w-full bg-gray-50 border-2 border-gray-100 focus:border-black focus:bg-white rounded-2xl p-5 text-lg font-medium outline-none transition-all h-40 resize-none placeholder:text-gray-300"
+                  />
+                  <div className="flex justify-between mt-2 px-1">
+                    <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{broadcastMessage.length} characters</span>
+                    <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Sent to all customers</span>
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    onClick={handleBroadcast}
+                    disabled={isBroadcasting || !broadcastMessage.trim()}
+                    className="w-full bg-black text-white py-5 rounded-2xl text-xl font-bold hover:bg-gray-800 transition-all shadow-xl disabled:opacity-50 disabled:translate-y-0 hover:-translate-y-1 flex items-center justify-center gap-3 group"
+                  >
+                    {isBroadcasting ? (
+                      <>
+                        <div className="w-5 h-5 border-3 border-white/20 border-t-white rounded-full animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        Send Broadcast
+                        <svg className="w-5 h-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

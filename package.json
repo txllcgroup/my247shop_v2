@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@list-labs/react-joyride": "^2.9.4",
+    "@stripe/stripe-js": "^8.11.0",
     "@tailwindcss/oxide": "^4.2.1",
     "framer-motion": "^12.36.0",
     "lightningcss": "^1.32.0",
@@ -18,7 +19,8 @@
     "react-confetti": "^6.4.0",
     "react-dom": "19.2.3",
     "react-paystack-19": "^6.0.0",
-    "react-use": "^17.6.0"
+    "react-use": "^17.6.0",
+    "stripe": "^20.4.1"
   },
   "overrides": {
     "react-floater": "^0.10.0",

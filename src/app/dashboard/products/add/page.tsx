@@ -24,7 +24,7 @@ const ProgressBar = ({ currentStep, totalSteps }: { currentStep: number, totalSt
 const FloatingInput = ({ label, placeholder, type = "text", value, onChange, prefix }: any) => (
   <div className="relative w-full">
     {prefix && (
-      <div className="absolute left-5 top-1/2 -translate-y-1/2 text-lg font-semibold text-gray-400 z-10">
+      <div className="absolute left-5 top-1/2 -translate-y-1/2 text-base font-bold text-gray-400 z-10">
         {prefix}
       </div>
     )}
@@ -33,12 +33,12 @@ const FloatingInput = ({ label, placeholder, type = "text", value, onChange, pre
       id={label}
       value={value}
       onChange={onChange}
-      className={`peer w-full border-2 border-gray-200 rounded-2xl pb-3 pt-7 text-lg font-semibold focus:outline-none focus:border-black focus:ring-0 transition-colors placeholder-transparent ${prefix ? 'pl-10' : 'pl-5'}`}
+      className={`peer w-full border-2 border-gray-200 rounded-2xl pb-3 pt-7 text-lg font-semibold focus:outline-none focus:border-black focus:ring-0 transition-colors placeholder-transparent ${prefix?.length > 1 ? 'pl-16' : prefix ? 'pl-10' : 'pl-5'}`}
       placeholder={placeholder}
     />
     <label
       htmlFor={label}
-      className={`absolute transition-all peer-placeholder-shown:text-base peer-placeholder-shown:top-5 peer-placeholder-shown:font-medium peer-focus:top-2.5 peer-focus:text-xs peer-focus:font-semibold peer-focus:text-black cursor-text ${prefix ? 'left-10' : 'left-5'} ${value || type === 'number' ? 'top-2.5 text-xs font-semibold text-gray-500' : 'top-5 text-base font-medium text-gray-400'}`}
+      className={`absolute transition-all peer-placeholder-shown:text-base peer-placeholder-shown:top-5 peer-placeholder-shown:font-medium peer-focus:top-2.5 peer-focus:text-xs peer-focus:font-semibold peer-focus:text-black cursor-text ${prefix?.length > 1 ? 'left-16' : prefix ? 'left-10' : 'left-5'} ${value || type === 'number' ? 'top-2.5 text-xs font-semibold text-gray-500' : 'top-5 text-base font-medium text-gray-400'}`}
     >
       {label}
     </label>
@@ -77,10 +77,10 @@ const Step1Basics = ({ formData, updateData }: any) => (
 const Step2Pricing = ({ formData, updateData }: any) => (
   <StepLayout title="Pricing & Inventory" description="Set your prices and track how much you have in stock.">
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
-      <FloatingInput label="Price" type="number" prefix={formData.currency === 'NGN' ? '₦' : '$'} value={formData.price} onChange={(e: any) => updateData({ price: parseFloat(e.target.value) || 0 })} />
-      <FloatingInput label="Compare at Price" type="number" prefix={formData.currency === 'NGN' ? '₦' : '$'} value={formData.compareAtPrice} onChange={(e: any) => updateData({ compareAtPrice: parseFloat(e.target.value) || 0 })} />
+      <FloatingInput label="Price" type="number" prefix={formData.currency} value={formData.price} onChange={(e: any) => updateData({ price: parseFloat(e.target.value) || 0 })} />
+      <FloatingInput label="Compare at Price" type="number" prefix={formData.currency} value={formData.compareAtPrice} onChange={(e: any) => updateData({ compareAtPrice: parseFloat(e.target.value) || 0 })} />
     </div>
-    <FloatingInput label="Cost per item" type="number" prefix={formData.currency === 'NGN' ? '₦' : '$'} value={formData.costPrice} onChange={(e: any) => updateData({ costPrice: parseFloat(e.target.value) || 0 })} />
+    <FloatingInput label="Cost per item" type="number" prefix={formData.currency} value={formData.costPrice} onChange={(e: any) => updateData({ costPrice: parseFloat(e.target.value) || 0 })} />
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full pt-4">
       <FloatingInput label="Stock Quantity" type="number" value={formData.stockQuantity} onChange={(e: any) => updateData({ stockQuantity: parseInt(e.target.value) || 0 })} />
       <FloatingInput label="Low Stock Threshold" type="number" value={formData.lowStockThreshold} onChange={(e: any) => updateData({ lowStockThreshold: parseInt(e.target.value) || 0 })} />
@@ -393,11 +393,13 @@ export default function AddProductPage() {
     const storedStoreId = localStorage.getItem('storeId');
     const storedCurrency = localStorage.getItem('currency');
     const storedStoreName = localStorage.getItem('storeName');
+    const storedCountry = localStorage.getItem('country');
     const profileStr = localStorage.getItem('profile');
 
     let storeId = storedStoreId || "";
     let currency = storedCurrency || "NGN";
     let name = storedStoreName || "";
+    let country = storedCountry || "";
 
     if (!storeId && profileStr) {
       try {
@@ -405,9 +407,15 @@ export default function AddProductPage() {
         storeId = profile.storeId || profile.id || "";
         currency = profile.currency || currency;
         name = profile.storeName || name;
+        country = profile.country || country;
       } catch (e) {
         console.error("Error parsing profile for storeId", e);
       }
+    }
+
+    // Set currency to USD if country is not Nigeria
+    if (country && country !== "Nigeria") {
+      currency = "USD";
     }
 
     if (name) setStoreName(name);

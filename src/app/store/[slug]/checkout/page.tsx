@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useCart } from '../cart/cartContext';
@@ -45,6 +45,17 @@ const FloatingInput = ({ label, type = "text", id, value, onChange, placeholder 
 
 import { usePaystackPayment } from 'react-paystack-19';
 
+// Helper to get the currency symbol
+function getCurrencySymbol(currency: string): string {
+  switch (currency) {
+    case 'NGN': return '₦';
+    case 'USD': return '$';
+    case 'EUR': return '€';
+    case 'GBP': return '£';
+    default: return currency;
+  }
+}
+
 export default function CheckoutPage() {
   const params = useParams();
   const router = useRouter();
@@ -68,6 +79,15 @@ export default function CheckoutPage() {
     note: ''
   });
 
+  // Derive currency from the first cart item (all items in a store share the same currency)
+  const cartCurrency = useMemo(() => {
+    if (cart.length > 0 && cart[0].currency) return cart[0].currency;
+    return 'NGN'; // Default fallback
+  }, [cart]);
+
+  const isNaira = cartCurrency === 'NGN';
+  const currencySymbol = getCurrencySymbol(cartCurrency);
+
   // Load user data if logged in
   useEffect(() => {
     const email = localStorage.getItem('email');
@@ -90,17 +110,18 @@ export default function CheckoutPage() {
   const taxes = subtotal * 0.08;
   const total = subtotal + shipping + taxes;
 
-  const config: any = {
-    reference: `${crypto.randomUUID()}-${localStorage.getItem('storeId')}`,
+  // --- Paystack config (only used for NGN) ---
+  const paystackConfig: any = {
+    reference: `${crypto.randomUUID()}-${typeof window !== 'undefined' ? localStorage.getItem('storeId') : ''}`,
     email: formData.email,
-    amount: Math.round(total * 100), // Amount is in kobo
+    amount: Math.round(total * 100), // Amount in kobo
     publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '',
   };
 
-  const initializePayment = usePaystackPayment(config);
+  const initializePayment = usePaystackPayment(paystackConfig);
 
-  const onSuccess = async (reference: any) => {
-    console.log("Payment Successful:", reference);
+  // --- Shared order placement logic ---
+  const placeOrder = async (paymentReference: string, paymentMethod: string) => {
     setIsProcessing(true);
     try {
       const customerId = localStorage.getItem('customerId') || '';
@@ -122,12 +143,12 @@ export default function CheckoutPage() {
           addressLine1: formData.address,
           city: formData.city,
           state: formData.state,
-          country: 'Nigeria',
+          country: isNaira ? 'Nigeria' : formData.state, // Use form data for non-NGN
           postalCode: formData.postalCode
         },
         note: formData.note,
-        paymentReference: reference.reference, // Add Paystack reference
-        paymentMethod: 'Paystack'
+        paymentReference,
+        paymentMethod
       };
 
       const res = await StorefrontService.placeOrder(orderPayload);
@@ -146,11 +167,86 @@ export default function CheckoutPage() {
     }
   };
 
-  const onClose = () => {
-    console.log("Payment closed");
+  // --- Paystack callbacks ---
+  const onPaystackSuccess = async (reference: any) => {
+    console.log("Paystack Payment Successful:", reference);
+    await placeOrder(reference.reference, 'Paystack');
+  };
+
+  const onPaystackClose = () => {
+    console.log("Paystack payment closed");
     setIsProcessing(false);
   };
 
+  // --- Stripe handler (local API route) ---
+  const handleStripePayment = async () => {
+    setIsProcessing(true);
+    setError(null);
+
+    try {
+      const customerId = localStorage.getItem('customerId') || '';
+      const storeId = localStorage.getItem('storeId') || '';
+
+      // Call our local Next.js API route to create a Stripe Checkout Session
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: cart.map(item => ({
+            productId: item.id,
+            productName: item.name,
+            quantity: item.quantity,
+            unitPrice: item.price,
+            image: item.image,
+            variant: item.variant || 'Default'
+          })),
+          currency: cartCurrency,
+          customerEmail: formData.email,
+          successUrl: `${window.location.origin}/store/${slug}/checkout?success=true`,
+          cancelUrl: `${window.location.origin}/store/${slug}/checkout?canceled=true`,
+          metadata: {
+            storeId,
+            customerId,
+            customerPhone: formData.phone,
+            shippingAddress: JSON.stringify({
+              addressLine1: formData.address,
+              city: formData.city,
+              state: formData.state,
+              postalCode: formData.postalCode
+            }),
+            note: formData.note
+          }
+        })
+      });
+
+      const data = await res.json();
+
+      if (data.url) {
+        // Redirect to Stripe Checkout
+        window.location.href = data.url;
+      } else {
+        throw new Error(data.error || 'Failed to create Stripe checkout session');
+      }
+    } catch (err: any) {
+      console.error("Stripe checkout error:", err);
+      setError(err.message || "Failed to initiate Stripe payment. Please try again.");
+      setIsProcessing(false);
+    }
+  };
+
+  // --- Handle Stripe success/cancel URL params ---
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('success') === 'true') {
+      setOrderSuccess(true);
+      clearCart();
+    }
+    if (urlParams.get('canceled') === 'true') {
+      setError('Payment was canceled. Please try again.');
+    }
+  }, []);
+
+  // --- Main form handler ---
   const handlePlaceOrder = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -163,13 +259,18 @@ export default function CheckoutPage() {
       return;
     }
 
-    if (!config.publicKey) {
-      setError("Payment configuration is missing. Please check your environment variables.");
-      return;
+    if (isNaira) {
+      // --- Paystack flow ---
+      if (!paystackConfig.publicKey) {
+        setError("Payment configuration is missing. Please check your environment variables.");
+        return;
+      }
+      setIsProcessing(true);
+      initializePayment({ onSuccess: onPaystackSuccess, onClose: onPaystackClose });
+    } else {
+      // --- Stripe flow ---
+      handleStripePayment();
     }
-
-    setIsProcessing(true);
-    initializePayment({ onSuccess, onClose });
   };
 
   if (orderSuccess) {
@@ -251,7 +352,7 @@ export default function CheckoutPage() {
           <button
             type="submit"
             disabled={isProcessing}
-            className="w-full bg-black text-white px-8 py-5 rounded-3xl text-2xl font-black hover:bg-gray-800 transition-all shadow-2xl hover:shadow-black/20 hover:-translate-y-1 flex items-center justify-center gap-4 disabled:opacity-50 disabled:translate-y-0"
+            className={`w-full text-white px-8 py-5 rounded-3xl text-2xl font-black hover:opacity-90 transition-all shadow-2xl hover:shadow-black/20 hover:-translate-y-1 flex items-center justify-center gap-4 disabled:opacity-50 disabled:translate-y-0 ${isNaira ? 'bg-[#00C3F7]' : 'bg-[#635BFF]'}`}
           >
             {isProcessing ? (
               <>
@@ -260,7 +361,7 @@ export default function CheckoutPage() {
               </>
             ) : (
               <>
-                Pay with Paystack
+                {isNaira ? 'Pay with Paystack' : 'Pay with Stripe'}
                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
               </>
             )}
@@ -287,7 +388,7 @@ export default function CheckoutPage() {
                       <span className="text-gray-400 font-bold text-sm uppercase tracking-wider">{item.variant || 'Standard'}</span>
                     </div>
                   </div>
-                  <span className="font-bold text-black text-lg">${(item.price * item.quantity).toLocaleString()}</span>
+                  <span className="font-bold text-black text-lg">{currencySymbol}{(item.price * item.quantity).toLocaleString()}</span>
                 </div>
               ))}
             </div>
@@ -295,22 +396,18 @@ export default function CheckoutPage() {
             <div className="space-y-4 text-xl font-bold border-t-2 border-gray-100 pt-8 mb-8">
               <div className="flex justify-between items-center text-gray-500">
                 <span>Subtotal</span>
-                <span className="text-black">${subtotal.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between items-center text-gray-500">
-                <span>Shipping</span>
-                <span className="text-emerald-600 uppercase text-sm border-2 border-emerald-100 bg-emerald-50 px-3 py-1 rounded-xl">Free</span>
+                <span className="text-black">{currencySymbol}{subtotal.toLocaleString()}</span>
               </div>
               <div className="flex justify-between items-center text-gray-500">
                 <span>Estimated Tax</span>
-                <span className="text-black">${taxes.toFixed(2)}</span>
+                <span className="text-black">{currencySymbol}{taxes.toFixed(2)}</span>
               </div>
             </div>
 
             <div className="flex justify-between items-center border-t-2 border-gray-100 pt-8">
               <span className="text-2xl font-black text-black uppercase tracking-tight">Total</span>
               <div className="flex items-end gap-2">
-                <span className="text-sm font-black text-gray-400 mb-1">NGN</span>
+                <span className="text-sm font-black text-gray-400 mb-1">{cartCurrency}</span>
                 <span className="text-5xl font-black tracking-tighter text-black">
                   {total.toLocaleString()}
                 </span>
