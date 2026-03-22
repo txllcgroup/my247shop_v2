@@ -529,7 +529,8 @@ const Step16Preview = ({ formData }: any) => (
 );
 
 const Step17Launch = ({ formData }: any) => {
-  const storeSlug = (formData.store.name || "MyStore").toLowerCase().replace(/[^a-z0-9]/g, '');
+  const storeSlug = formData.store.name?.replace(/ /g, '%20') || 'MyStore';
+  const storeUrl = `https://my247.shop/store/${storeSlug}`;
   return (
     <div className="w-full max-w-xl mx-auto flex flex-col items-center text-center animate-in zoom-in-95 duration-500">
       <div className="w-32 h-32 bg-black rounded-full flex items-center justify-center mb-10 shadow-xl shadow-black/20">
@@ -539,7 +540,7 @@ const Step17Launch = ({ formData }: any) => {
       </div>
       <h1 className="text-4xl md:text-5xl leading-[1.15] font-medium text-black mb-6">You're ready to launch!</h1>
       <p className="text-xl text-gray-500 font-medium mb-12 max-w-md leading-relaxed">
-        Your store <strong>{storeSlug}.my247shop.com</strong> has been configured with products, payments, and shipping.
+        Your store is live at <a href={storeUrl} target="_blank" rel="noopener noreferrer" className="text-black font-bold underline underline-offset-4 hover:text-gray-600 transition-colors">my247.shop/store/{formData.store.name}</a>
       </p>
       <div className="w-full space-y-4">
         <div className="p-6 bg-gray-50 rounded-2xl flex items-center gap-4 text-left">

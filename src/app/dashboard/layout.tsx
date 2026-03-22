@@ -278,7 +278,55 @@ export default function DashboardLayout({
             )
           })}
         </nav>
+
+        {/* Floating Store Link */}
+        <StoreLinkFloating profile={profile} />
       </div>
     </AuthGuard>
+  );
+}
+
+function StoreLinkFloating({ profile }: { profile: any }) {
+  const [copied, setCopied] = useState(false);
+  const storeSlug = profile?.storeName?.replace(/ /g, '%20') || 'my-store';
+  const storeUrl = `https://my247.shop/store/${storeSlug}`;
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(storeUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="fixed bottom-24 md:bottom-8 right-6 md:right-8 z-[60] animate-in slide-in-from-bottom-4 duration-500">
+      <div className="bg-white border-2 border-black rounded-2xl p-4 shadow-2xl flex items-center gap-4 group hover:-translate-y-1 transition-all">
+        <div className="flex flex-col min-w-[120px]">
+          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-1">Your Store Link</span>
+          <span className="text-sm font-bold text-black truncate max-w-[150px]">{storeUrl.replace('https://', '')}</span>
+        </div>
+        <div className="flex items-center gap-2 border-l-2 border-gray-100 pl-4">
+          <button 
+            onClick={handleCopy}
+            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${copied ? 'bg-emerald-500 text-white' : 'bg-gray-50 text-black hover:bg-black hover:text-white'}`}
+            title="Copy Link"
+          >
+            {copied ? (
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
+            )}
+          </button>
+          <a 
+            href={storeUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-10 h-10 rounded-xl bg-black text-white flex items-center justify-center hover:bg-gray-800 transition-all shadow-lg"
+            title="Visit Store"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+          </a>
+        </div>
+      </div>
+    </div>
   );
 }

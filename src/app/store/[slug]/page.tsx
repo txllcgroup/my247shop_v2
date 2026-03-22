@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { StorefrontService } from './storefrontService';
+import { useCart } from './cart/cartContext';
 
 export default function StoreHome() {
    const params = useParams();
@@ -11,6 +12,8 @@ export default function StoreHome() {
    const [products, setProducts] = useState<any[]>([]);
    const [isLoading, setIsLoading] = useState(true);
    const [error, setError] = useState<string | null>(null);
+   const [addingId, setAddingId] = useState<string | null>(null);
+   const { addToCart } = useCart();
 
    useEffect(() => {
       const initStorefront = async () => {
@@ -118,14 +121,37 @@ export default function StoreHome() {
                               {/* Quick Add Overlay */}
                               <div className="absolute inset-x-0 bottom-0 p-4 opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 transition-all duration-300">
                                  <button
-                                    className="w-full bg-white/90 backdrop-blur-md text-black px-6 py-4 rounded-2xl font-bold text-base hover:bg-black hover:text-white transition-colors border-2 border-transparent hover:border-black flex justify-center items-center gap-2 shadow-lg"
+                                    className={`w-full backdrop-blur-md px-6 py-4 rounded-2xl font-bold text-base transition-all border-2 flex justify-center items-center gap-2 shadow-lg ${
+                                       addingId === product.id 
+                                       ? 'bg-emerald-500 text-white border-emerald-500' 
+                                       : 'bg-white/90 text-black border-transparent hover:bg-black hover:text-white hover:border-black'
+                                    }`}
                                     onClick={(e) => {
                                        e.preventDefault();
-                                       // Quick add logic...
+                                       setAddingId(product.id);
+                                       addToCart({
+                                          id: product.id,
+                                          name: product.name,
+                                          price: product.price,
+                                          quantity: 1,
+                                          image: product.images?.[0] || '',
+                                          currency: product.currency || 'USD'
+                                       });
+                                       setTimeout(() => setAddingId(null), 1500);
                                     }}
+                                    disabled={addingId === product.id}
                                  >
-                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-                                    Quick Add
+                                    {addingId === product.id ? (
+                                       <>
+                                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                                          Added
+                                       </>
+                                    ) : (
+                                       <>
+                                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                                          Quick Add
+                                       </>
+                                    )}
                                  </button>
                               </div>
                            </div>
