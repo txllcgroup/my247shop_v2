@@ -1,17 +1,35 @@
 "use client";
-import React from 'react';
+import React, { useMemo } from 'react';
 import Link from 'next/link';
 import { useCart } from './cartContext';
 import { useParams } from 'next/navigation';
+
+// Helper to get the currency symbol
+function getCurrencySymbol(currency: string): string {
+  switch (currency) {
+    case 'NGN': return '₦';
+    case 'USD': return '$';
+    case 'EUR': return '€';
+    case 'GBP': return '£';
+    default: return currency;
+  }
+}
 
 export default function CartPage() {
   const params = useParams();
   const slug = params?.slug as string;
   const { cart, updateQuantity, removeFromCart, subtotal } = useCart();
 
-  const shipping = 0; // Free shipping over $100
-  const taxes = subtotal * 0.08;
-  const total = subtotal + shipping + taxes;
+  // Derive currency from the first cart item (all items in a store share the same currency)
+  const cartCurrency = useMemo(() => {
+    if (cart.length > 0 && cart[0].currency) return cart[0].currency;
+    return 'NGN'; // Default fallback
+  }, [cart]);
+
+  const currencySymbol = getCurrencySymbol(cartCurrency);
+
+  const shipping = 0; // Free shipping
+  const total = subtotal + shipping;
 
   if (cart.length === 0) {
       return (
@@ -52,7 +70,7 @@ export default function CartPage() {
                         </Link>
                         <div className="flex-1">
                            <Link href={`/store/${slug}/product/${item.id}`} className="text-xl md:text-2xl font-bold text-black hover:underline mb-2 block">{item.name}</Link>
-                           <p className="text-gray-500 font-bold mb-4 md:mb-0">${item.price.toLocaleString()}</p>
+                           <p className="text-gray-500 font-bold mb-4 md:mb-0">{currencySymbol}{item.price.toLocaleString()}</p>
                            <button onClick={() => removeFromCart(item.id)} className="text-sm font-bold text-gray-400 hover:text-rose-500 transition-colors underline underline-offset-4 md:hidden">Remove</button>
                         </div>
                      </div>
@@ -68,7 +86,7 @@ export default function CartPage() {
                      <div className="col-span-3 flex justify-between md:justify-end w-full md:w-auto items-center">
                         <span className="md:hidden text-lg font-bold text-gray-400">Total:</span>
                         <div className="flex flex-col items-end gap-2">
-                           <span className="text-xl md:text-2xl font-bold text-black">${(item.price * item.quantity).toLocaleString()}</span>
+                           <span className="text-xl md:text-2xl font-bold text-black">{currencySymbol}{(item.price * item.quantity).toLocaleString()}</span>
                            <button onClick={() => removeFromCart(item.id)} className="text-sm font-bold text-gray-400 hover:text-rose-500 transition-colors underline underline-offset-4 hidden md:block">Remove</button>
                         </div>
                      </div>
@@ -85,19 +103,18 @@ export default function CartPage() {
                <div className="space-y-5 text-lg font-medium mb-8">
                   <div className="flex justify-between items-center text-gray-500">
                      <span>Subtotal</span>
-                     <span className="text-black font-bold">${subtotal.toFixed(2)}</span>
+                     <span className="text-black font-bold">{currencySymbol}{subtotal.toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between items-center text-gray-500">
+                  <div className="flex justify-between items-center text-gray-500 pb-6 border-b-2 border-gray-200">
                      <span>Shipping</span>
                      <span className="text-emerald-600 font-bold uppercase tracking-wider text-sm border-2 border-emerald-200 bg-emerald-50 px-3 py-1 rounded-lg">Free</span>
                   </div>
-                  <div className="flex justify-between items-center text-gray-500 pb-6 border-b-2 border-gray-200">
-                     <span>Estimated Tax</span>
-                     <span className="text-black font-bold">${taxes.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between items-center pt-2">
+                  <div className="flex justify-between items-end pt-2">
                      <span className="text-xl font-bold text-black">Total</span>
-                     <span className="text-3xl font-bold tracking-tight text-black">${total.toFixed(2)}</span>
+                     <div className="flex items-end gap-2">
+                        <span className="text-sm font-bold text-gray-400 mb-1">{cartCurrency}</span>
+                        <span className="text-3xl font-bold tracking-tight text-black">{currencySymbol}{total.toFixed(2)}</span>
+                     </div>
                   </div>
                </div>
                

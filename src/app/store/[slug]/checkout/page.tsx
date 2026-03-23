@@ -107,8 +107,7 @@ export default function CheckoutPage() {
   }, []);
 
   const shipping = 0;
-  const taxes = subtotal * 0.08;
-  const total = subtotal + shipping + taxes;
+  const total = subtotal + shipping;
 
   // --- Paystack config (only used for NGN) ---
   const paystackConfig: any = {
@@ -397,10 +396,6 @@ export default function CheckoutPage() {
               <div className="flex justify-between items-center text-gray-500">
                 <span>Subtotal</span>
                 <span className="text-black">{currencySymbol}{subtotal.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between items-center text-gray-500">
-                <span>Estimated Tax</span>
-                <span className="text-black">{currencySymbol}{taxes.toFixed(2)}</span>
               </div>
             </div>
 
