@@ -8,6 +8,100 @@ import { usePaystackPayment } from 'react-paystack-19';
 import { OrderService, Order, OrderSummary } from './orders/orderService';
 import { CustomerService } from './customers/customerService';
 
+const subscriptionPlans = [
+  {
+    id: 'starter',
+    plan_name: "Starter",
+    description: "Perfect for small businesses just getting started online.",
+    price: { monthly: 3000, annually: 24000 },
+    priceUsd: { monthly: 2, annually: 16 },
+    features: { max_orders: 10, max_products: 10, ai_assistant: false, broadcast_message: false, image_generation: false, free_transaction_processing: false, support: "basic" }
+  },
+  {
+    id: 'growth',
+    plan_name: "Growth",
+    description: "Best for growing businesses that need more flexibility and marketing tools.",
+    price: { monthly: 4000, annually: 35000 },
+    priceUsd: { monthly: 3, annually: 24 },
+    features: { max_orders: "unlimited", max_products: "unlimited", ai_assistant: true, broadcast_message: true, image_generation: false, free_transaction_processing: false, support: "standard" },
+    isPopular: true
+  },
+  {
+    id: 'pro',
+    plan_name: "Pro",
+    description: "For serious sellers who want the full power of My247Shop.",
+    price: { monthly: 6000, annually: 50000 },
+    priceUsd: { monthly: 4, annually: 34 },
+    features: { max_orders: "unlimited", max_products: "unlimited", ai_assistant: true, broadcast_message: true, image_generation: true, free_transaction_processing: true, support: "priority" }
+  }
+];
+
+const PlanPayButton = ({ plan, billing, profile, currency, onSuccess }: any) => {
+  const isNgn = currency === 'NGN';
+  const amount = isNgn ? plan.price[billing] * 100 : plan.priceUsd[billing] * 100;
+  
+  const config = {
+    reference: `SUB-${plan.plan_name.charAt(0)}-${new Date().getTime()}`,
+    email: profile?.email || "store@my247.com",
+    amount: isNgn ? amount : 0,
+    publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '',
+  };
+  const initializePayment = usePaystackPayment(config);
+  
+  const [isLoading, setIsLoading] = React.useState(false);
+
+  const handleStripeCheckout = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: [{
+            productName: `My247Shop ${plan.plan_name} Plan (${billing})`,
+            unitPrice: plan.priceUsd[billing],
+            quantity: 1
+          }],
+          currency: 'usd',
+          successUrl: `${window.location.origin}/dashboard?subscription=success&plan=${billing === 'annually' ? 'annual' : 'monthly'}`,
+          cancelUrl: `${window.location.origin}/dashboard?subscription=cancel`,
+          customerEmail: profile?.email || "store@my247.com",
+          metadata: { planId: plan.id, billingInterval: billing }
+        })
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert(data.error || 'Failed to initialize payment');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('An error occurred during checkout.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePay = () => {
+    if (isNgn) {
+      initializePayment({ onSuccess, onClose: () => {} });
+    } else {
+      handleStripeCheckout();
+    }
+  };
+
+  return (
+    <button
+      onClick={handlePay}
+      disabled={isLoading}
+      className={`w-full py-4 rounded-xl font-bold transition-all text-[15px] mt-8 shadow-sm ${plan.isPopular ? 'bg-black text-white hover:bg-gray-800 hover:-translate-y-1 hover:shadow-lg' : 'bg-gray-100 text-black hover:bg-gray-200'} ${isLoading ? 'opacity-50 cursor-wait' : ''}`}
+    >
+      {isLoading ? 'Processing...' : `Subscribe to ${plan.plan_name}`}
+    </button>
+  );
+};
+
 const SummaryCard = ({ title, value }: any) => (
   <div className="bg-white p-6 rounded-2xl border-2 border-gray-200 flex flex-col justify-center">
     <div className="flex items-center justify-between mb-4">
@@ -30,7 +124,9 @@ const getCurrencySymbol = (currency?: string) => {
 export default function DashboardHome() {
   const { width, height } = useWindowSize();
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
-  const [subscriptionStep, setSubscriptionStep] = useState<'choose' | 'pay-per-tx-success' | 'monthly-success'>('choose');
+  const [subscriptionStep, setSubscriptionStep] = useState<'choose' | 'pay-per-tx-success' | 'success'>('choose');
+  const [billingInterval, setBillingInterval] = useState<'monthly' | 'annually'>('monthly');
+  const [paymentCurrency, setPaymentCurrency] = useState<'NGN' | 'USD'>('NGN');
   
   const [showBroadcastModal, setShowBroadcastModal] = useState(false);
   const [broadcastMessage, setBroadcastMessage] = useState('');
@@ -44,9 +140,20 @@ export default function DashboardHome() {
   const [currency, setCurrency] = useState('NGN');
 
   useEffect(() => {
+    // Handle Stripe redirect success
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('subscription') === 'success') {
+      const plan = params.get('plan') || 'monthly';
+      localStorage.setItem('subscription_status', plan);
+      setSubscriptionStep('success');
+      setShowSubscriptionModal(true);
+      window.history.replaceState(null, '', '/dashboard');
+      return;
+    }
+
     // Check subscription status
     const status = localStorage.getItem('subscription_status');
-    const isSubscribed = status === 'monthly' || status === 'per-tx';
+    const isSubscribed = status === 'monthly' || status === 'annual' || status === 'per-tx';
 
     // Show modal when user gets to the dashboard if not subscribed
     const timer = setTimeout(() => {
@@ -88,18 +195,9 @@ export default function DashboardHome() {
     return () => clearTimeout(timer);
   }, []);
 
-  const paystackConfig = {
-    reference: `SUB-${new Date().getTime()}`,
-    email: profile?.email || "store@my247.com",
-    amount: 2000 * 100, // 2000 NGN in kobo
-    publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '',
-  };
-
-  const initializePayment = usePaystackPayment(paystackConfig);
-
-  const handleMonthlySuccess = (reference: any) => {
-    localStorage.setItem('subscription_status', 'monthly');
-    setSubscriptionStep('monthly-success');
+  const handlePlanSuccess = (reference: any) => {
+    localStorage.setItem('subscription_status', billingInterval === 'annually' ? 'annual' : 'monthly');
+    setSubscriptionStep('success');
     setTimeout(() => setShowSubscriptionModal(false), 4000);
   };
 
@@ -266,80 +364,195 @@ export default function DashboardHome() {
       {/* Subscription Modal */}
       {showSubscriptionModal && (
         <>
-          {(subscriptionStep === 'pay-per-tx-success' || subscriptionStep === 'monthly-success') && (
+          {(subscriptionStep === 'pay-per-tx-success' || subscriptionStep === 'success') && (
             <div className="fixed inset-0 z-[110] pointer-events-none">
               <Confetti width={width} height={height} recycle={false} numberOfPieces={400} />
             </div>
           )}
-          <div className="fixed inset-0 bg-black/40 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-300">
-            <div className="bg-white rounded-[32px] w-full max-w-[420px] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 relative">
+          <div className="fixed inset-0 bg-black/40 z-[100] backdrop-blur-sm animate-in fade-in duration-300 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4">
+              <div className={`bg-white rounded-[32px] w-full ${subscriptionStep === 'choose' ? 'max-w-[1000px]' : 'max-w-[420px]'} overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 relative my-4`}>
 
-              {subscriptionStep === 'choose' && (
-                <div className="p-8 pb-3 text-center animate-in slide-in-from-right-4 duration-300">
-                  <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-5">
-                    <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                  </div>
-                  <h2 className="text-[24px] font-bold text-black tracking-tight mb-2">Choose Your Plan</h2>
-                  <p className="text-gray-500 font-medium text-[15px] leading-relaxed mb-8">
-                    Select a billing option to keep your store active and start accepting payments.
-                  </p>
+                {subscriptionStep === 'choose' && (
+                  <div className="p-8 md:p-10 animate-in slide-in-from-bottom-4 duration-500">
+                    <div className="text-center max-w-2xl mx-auto mb-10">
+                      <h2 className="text-3xl md:text-4xl font-bold text-black tracking-tight mb-4">Choose Your Plan</h2>
+                      <p className="text-gray-500 font-medium text-[16px] leading-relaxed mb-8">
+                        Select the best plan for your business to unlock premium features and increase your sales.
+                      </p>
+                      
+                      {/* Currency & Billing Controllers */}
+                      <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8 mb-4">
+                        {/* Currency Toggle */}
+                        <div className="flex items-center gap-2 bg-gray-50 p-1.5 rounded-2xl border border-gray-100 shadow-inner">
+                          <button 
+                            onClick={() => setPaymentCurrency('NGN')}
+                            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-[15px] font-bold transition-all ${paymentCurrency === 'NGN' ? 'bg-white text-black shadow-md ring-1 ring-gray-200 scale-[1.02]' : 'text-gray-400 hover:text-black hover:bg-white/50'}`}
+                          >
+                            <span className="text-xl leading-none">🇳🇬</span> NGN
+                          </button>
+                          <button 
+                            onClick={() => setPaymentCurrency('USD')}
+                            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-[15px] font-bold transition-all ${paymentCurrency === 'USD' ? 'bg-white text-black shadow-md ring-1 ring-gray-200 scale-[1.02]' : 'text-gray-400 hover:text-black hover:bg-white/50'}`}
+                          >
+                            <span className="text-xl leading-none">🇺🇸</span> USD
+                          </button>
+                        </div>
 
-                  <div className="space-y-3">
-                    <button
-                      onClick={() => initializePayment({ onSuccess: handleMonthlySuccess, onClose: () => { } })}
-                      className="w-full flex items-center justify-between p-4 rounded-2xl border-2 border-black bg-black text-white hover:bg-gray-800 hover:border-gray-800 transition-all group"
-                    >
-                      <div className="flex flex-col items-start gap-0.5">
-                        <span className="font-bold text-[16px]">Monthly Subscription</span>
-                        <span className="text-white/80 text-[13px] font-medium">Flat fee, full access</span>
+                        <div className="w-px h-10 bg-gray-200 hidden md:block"></div>
+
+                        {/* Billing Toggle */}
+                        <div className="flex items-center gap-2 bg-emerald-50/50 p-1.5 rounded-2xl border border-emerald-100/50 shadow-inner">
+                          <button 
+                            onClick={() => setBillingInterval('monthly')}
+                            className={`px-6 py-2.5 rounded-xl text-[15px] font-bold transition-all ${billingInterval === 'monthly' ? 'bg-white text-gray-900 shadow-md ring-1 ring-emerald-100 scale-[1.02]' : 'text-emerald-700/60 hover:text-emerald-800 hover:bg-white/50'}`}
+                          >
+                            Monthly
+                          </button>
+                          <button 
+                            onClick={() => setBillingInterval('annually')}
+                            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-[15px] font-bold transition-all ${billingInterval === 'annually' ? 'bg-white text-gray-900 shadow-md ring-1 ring-emerald-100 scale-[1.02]' : 'text-emerald-700/60 hover:text-emerald-800 hover:bg-white/50'}`}
+                          >
+                            Annually
+                            <span className={`px-2 py-0.5 rounded-md text-[11px] font-black tracking-wide uppercase ${billingInterval === 'annually' ? 'bg-emerald-500 text-white shadow-sm' : 'bg-emerald-100 text-emerald-700'}`}>Save 20%</span>
+                          </button>
+                        </div>
                       </div>
-                      <span className="font-bold text-[18px] group-hover:scale-105 transition-transform origin-right">₦2,000</span>
-                    </button>
+                    </div>
 
-                    <button
-                      onClick={handlePayPerTx}
-                      className="w-full flex items-center justify-between p-4 rounded-2xl border-2 border-gray-200 bg-white text-black hover:border-black hover:bg-gray-50 transition-all group"
-                    >
-                      <div className="flex flex-col items-start gap-0.5">
-                        <span className="font-bold text-[16px]">Pay per transaction</span>
-                        <span className="text-gray-500 text-[13px] font-medium">No fixed monthly fees</span>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      {subscriptionPlans.map((plan: any) => (
+                        <div key={plan.id} className={`relative flex flex-col p-6 lg:p-8 rounded-[24px] border-2 transition-all ${plan.isPopular ? 'border-black bg-white shadow-xl scale-[1.02]' : 'border-gray-100 bg-white hover:border-gray-300'}`}>
+                          {plan.isPopular && (
+                            <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-black text-white px-4 py-1.5 rounded-full text-[12px] font-bold tracking-widest uppercase">
+                              Most Popular
+                            </div>
+                          )}
+                          
+                          <div className="mb-6">
+                            <h3 className="text-[22px] font-bold text-black mb-2">{plan.plan_name}</h3>
+                            <p className="text-[14px] text-gray-500 font-medium min-h-[42px]">{plan.description}</p>
+                          </div>
+                          
+                          <div className="mb-8">
+                            <div className="flex items-baseline gap-1">
+                              <span className="text-[40px] font-bold tracking-tight text-black leading-none">
+                                {paymentCurrency === 'NGN' ? '₦' : '$'}
+                                {paymentCurrency === 'NGN' ? plan.price[billingInterval].toLocaleString() : plan.priceUsd[billingInterval]}
+                              </span>
+                              <span className="text-gray-500 font-medium text-sm">/{billingInterval === 'monthly' ? 'mo' : 'yr'}</span>
+                            </div>
+                            {billingInterval === 'annually' && (
+                              <div className="mt-2 text-[13px] font-medium text-emerald-600">
+                                Billed annually ({paymentCurrency === 'NGN' ? '₦' : '$'}
+                                {paymentCurrency === 'NGN' ? plan.price.annually.toLocaleString() : plan.priceUsd.annually}/year)
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="space-y-4 flex-1">
+                            <div className="flex items-start gap-3">
+                              <svg className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                              <span className="text-[14.5px] font-medium text-gray-700">{plan.features.max_orders === 'unlimited' ? 'Unlimited' : plan.features.max_orders} orders</span>
+                            </div>
+                            <div className="flex items-start gap-3">
+                              <svg className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                              <span className="text-[14.5px] font-medium text-gray-700">{plan.features.max_products === 'unlimited' ? 'Unlimited' : plan.features.max_products} products</span>
+                            </div>
+                            
+                            <div className={`flex items-start gap-3 ${plan.features.ai_assistant ? '' : 'opacity-40 grayscale'}`}>
+                              {plan.features.ai_assistant ? (
+                                <svg className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                              ) : (
+                                <svg className="w-5 h-5 text-gray-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                              )}
+                              <span className="text-[14.5px] font-medium text-gray-700">AI Assistant</span>
+                            </div>
+
+                            <div className={`flex items-start gap-3 ${plan.features.broadcast_message ? '' : 'opacity-40 grayscale'}`}>
+                              {plan.features.broadcast_message ? (
+                                <svg className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                              ) : (
+                                <svg className="w-5 h-5 text-gray-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                              )}
+                              <span className="text-[14.5px] font-medium text-gray-700">Broadcast Messages</span>
+                            </div>
+                            
+                            <div className={`flex items-start gap-3 ${plan.features.free_transaction_processing ? '' : 'opacity-40 grayscale'}`}>
+                              {plan.features.free_transaction_processing ? (
+                                <svg className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                              ) : (
+                                <svg className="w-5 h-5 text-gray-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                              )}
+                              <span className="text-[14.5px] font-medium text-gray-700">Free transaction processing</span>
+                            </div>
+
+                            <div className={`flex items-start gap-3 ${plan.features.image_generation ? '' : 'opacity-40 grayscale'}`}>
+                              {plan.features.image_generation ? (
+                                <svg className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                              ) : (
+                                <svg className="w-5 h-5 text-gray-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                              )}
+                              <span className="text-[14.5px] font-medium text-gray-700">AI Image Generation</span>
+                            </div>
+
+                            <div className="flex items-start gap-3">
+                              <svg className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                              <span className="text-[14.5px] font-medium text-gray-700 tracking-wide capitalize">{plan.features.support} Support</span>
+                            </div>
+                          </div>
+
+                          <PlanPayButton plan={plan} billing={billingInterval} profile={profile} currency={paymentCurrency} onSuccess={handlePlanSuccess} />
+                        </div>
+                      ))}
+                    </div>
+                    
+                    <div className="mt-10 pt-8 border-t border-gray-100 flex flex-col md:flex-row items-center justify-between gap-6 bg-gray-50/80 -mx-8 md:-mx-10 -mb-8 md:-mb-10 p-8 md:px-10 md:py-8 rounded-b-[32px]">
+                      <div className="text-center md:text-left">
+                        <h4 className="text-[17px] font-bold text-black">Not ready for a subscription?</h4>
+                        <p className="text-[14px] text-gray-500 font-medium mt-1">Start completely free. We only charge 2% when you make a sale.</p>
                       </div>
-                      <span className="font-bold text-[18px] group-hover:scale-105 transition-transform origin-right">Select</span>
+                      <button
+                        onClick={handlePayPerTx}
+                        className="text-[15px] font-bold text-gray-700 hover:text-black transition-all border-2 border-gray-200 px-8 py-3.5 rounded-xl hover:bg-white hover:border-gray-300 shadow-sm whitespace-nowrap bg-gray-100/50"
+                      >
+                        Skip & Pay-Per-Sale
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {(subscriptionStep === 'pay-per-tx-success' || subscriptionStep === 'success') && (
+                  <div className="p-8 pt-12 pb-12 text-center animate-in zoom-in-95 duration-500">
+                    <div className="w-24 h-24 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-8">
+                      <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                    </div>
+                    <h2 className="text-[32px] font-bold text-black tracking-tight mb-4">Congratulations!</h2>
+                    <p className="text-gray-500 font-medium text-[16px] leading-relaxed mb-8 max-w-sm mx-auto">
+                      {subscriptionStep === 'pay-per-tx-success'
+                        ? "You can now continue enjoying the platform and doing transactions seamlessly."
+                        : "You have successfully updated your subscription. Enjoy full access to premium features!"}
+                    </p>
+                    <button
+                      onClick={() => setShowSubscriptionModal(false)}
+                      className="w-full max-w-xs mx-auto block py-4 rounded-xl bg-black text-white font-bold text-[16px] hover:bg-gray-800 hover:-translate-y-1 transition-all shadow-xl"
+                    >
+                      Continue to Dashboard
                     </button>
                   </div>
-                </div>
-              )}
+                )}
 
-              {(subscriptionStep === 'pay-per-tx-success' || subscriptionStep === 'monthly-success') && (
-                <div className="p-8 pt-10 pb-10 text-center animate-in zoom-in-95 duration-500">
-                  <div className="w-20 h-20 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                {subscriptionStep === 'choose' && (
+                  <div className="absolute top-6 right-6 z-10">
+                    <button
+                      onClick={() => setShowSubscriptionModal(false)}
+                      className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 hover:bg-gray-200 hover:text-black transition-all"
+                    >
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
                   </div>
-                  <h2 className="text-[26px] font-bold text-black tracking-tight mb-3">Congratulations!</h2>
-                  <p className="text-gray-500 font-medium text-[16px] leading-relaxed mb-6">
-                    {subscriptionStep === 'pay-per-tx-success'
-                      ? "You can now continue enjoying the platform and doing transactions seamlessly."
-                      : "You have successfully subscribed to the monthly plan. Enjoy full access!"}
-                  </p>
-                  <button
-                    onClick={() => setShowSubscriptionModal(false)}
-                    className="w-full py-3.5 rounded-xl bg-gray-100 text-black font-semibold text-[15px] hover:bg-gray-200 transition-colors"
-                  >
-                    Continue to Dashboard
-                  </button>
-                </div>
-              )}
-
-              {subscriptionStep === 'choose' && (
-                <div className="px-8 py-4 bg-gray-50 flex justify-center border-t border-gray-100 mt-5">
-                  <button
-                    onClick={() => setShowSubscriptionModal(false)}
-                    className="text-[14px] font-semibold text-gray-500 hover:text-black transition-colors py-1 px-3 rounded-lg hover:bg-gray-200/50"
-                  >
-                    I'll decide later
-                  </button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
         </>
