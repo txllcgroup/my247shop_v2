@@ -180,8 +180,10 @@ export default function DashboardLayout({
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
-              <button className="w-12 h-12 border-2 border-gray-200 rounded-full flex items-center justify-center text-black hover:bg-gray-50 hover:border-black transition-colors relative">
+            <div className="flex items-center gap-2 sm:gap-4">
+              <StoreLinkHeader profile={profile} />
+
+              <button className="hidden sm:flex w-12 h-12 border-2 border-gray-200 rounded-full items-center justify-center text-black hover:bg-gray-50 hover:border-black transition-colors relative shrink-0">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
                 <span className="absolute top-[10px] right-[10px] w-2.5 h-2.5 bg-black rounded-full border-2 border-white"></span>
               </button>
@@ -279,14 +281,12 @@ export default function DashboardLayout({
           })}
         </nav>
 
-        {/* Floating Store Link */}
-        <StoreLinkFloating profile={profile} />
       </div>
     </AuthGuard>
   );
 }
 
-function StoreLinkFloating({ profile }: { profile: any }) {
+function StoreLinkHeader({ profile }: { profile: any }) {
   const [copied, setCopied] = useState(false);
   const storeSlug = profile?.storeName?.replace(/ /g, '%20') || 'my-store';
   const storeUrl = `https://my247.shop/store/${storeSlug}`;
@@ -298,34 +298,33 @@ function StoreLinkFloating({ profile }: { profile: any }) {
   };
 
   return (
-    <div className="fixed bottom-24 md:bottom-8 right-6 md:right-8 z-[60] animate-in slide-in-from-bottom-4 duration-500">
-      <div className="bg-white border-2 border-black rounded-2xl p-4 shadow-2xl flex items-center gap-4 group hover:-translate-y-1 transition-all">
-        <div className="flex flex-col min-w-[120px]">
-          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-1">Your Store Link</span>
-          <span className="text-sm font-bold text-black truncate max-w-[150px]">{storeUrl.replace('https://', '')}</span>
-        </div>
-        <div className="flex items-center gap-2 border-l-2 border-gray-100 pl-4">
-          <button 
-            onClick={handleCopy}
-            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${copied ? 'bg-emerald-500 text-white' : 'bg-gray-50 text-black hover:bg-black hover:text-white'}`}
-            title="Copy Link"
-          >
-            {copied ? (
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-            ) : (
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
-            )}
-          </button>
-          <a 
-            href={storeUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-10 h-10 rounded-xl bg-black text-white flex items-center justify-center hover:bg-gray-800 transition-all shadow-lg"
-            title="Visit Store"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-          </a>
-        </div>
+    <div className="flex items-center bg-gray-50 border border-gray-200 rounded-2xl p-1 md:p-1.5 shrink-0 mx-1 md:mx-0">
+      <div className="hidden md:flex flex-col px-3 max-w-[140px]">
+        <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-0.5 mt-0.5">Your Store Link</span>
+        <span className="text-[13px] font-bold text-black truncate">{storeUrl.replace('https://', '')}</span>
+      </div>
+      
+      <div className="flex items-center gap-1.5 md:pl-2 md:border-l-2 border-gray-200">
+        <button 
+          onClick={handleCopy}
+          className={`w-9 h-9 md:w-10 md:h-10 rounded-xl flex items-center justify-center transition-all ${copied ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-white hover:bg-gray-200 text-gray-700 border border-transparent hover:border-gray-300'}`}
+          title="Copy Link"
+        >
+          {copied ? (
+            <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+          ) : (
+            <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
+          )}
+        </button>
+        <a 
+          href={storeUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-black text-white flex items-center justify-center hover:bg-gray-800 transition-all shadow-sm"
+          title="Visit Store"
+        >
+          <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+        </a>
       </div>
     </div>
   );
