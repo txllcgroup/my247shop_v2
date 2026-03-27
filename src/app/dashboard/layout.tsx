@@ -303,9 +303,9 @@ function StoreLinkHeader({ profile }: { profile: any }) {
         <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-0.5 mt-0.5">Your Store Link</span>
         <span className="text-[13px] font-bold text-black truncate">{storeUrl.replace('https://', '')}</span>
       </div>
-      
+
       <div className="flex items-center gap-1.5 md:pl-2 md:border-l-2 border-gray-200">
-        <button 
+        <button
           onClick={handleCopy}
           className={`w-9 h-9 md:w-10 md:h-10 rounded-xl flex items-center justify-center transition-all ${copied ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-white hover:bg-gray-200 text-gray-700 border border-transparent hover:border-gray-300'}`}
           title="Copy Link"
@@ -316,7 +316,7 @@ function StoreLinkHeader({ profile }: { profile: any }) {
             <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
           )}
         </button>
-        <a 
+        <a
           href={storeUrl}
           target="_blank"
           rel="noopener noreferrer"
