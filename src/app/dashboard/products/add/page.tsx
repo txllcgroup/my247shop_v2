@@ -47,8 +47,8 @@ const FloatingInput = ({ label, placeholder, type = "text", value, onChange, pre
 
 const StepLayout = ({ title, description, children }: any) => (
   <div className="w-full max-w-2xl mx-auto flex flex-col items-center animate-in fade-in slide-in-from-bottom-4 duration-500">
-    <h1 className="text-3xl md:text-5xl font-medium tracking-tight text-black mb-6 text-center leading-[1.15]">{title}</h1>
-    {description && <p className="text-lg md:text-xl text-gray-500 font-medium mb-12 text-center max-w-xl leading-relaxed">{description}</p>}
+    <h1 className="text-3xl md:text-5xl font-medium tracking-tight text-black mb-4 text-center leading-[1.15]">{title}</h1>
+    {description && <p className="text-lg md:text-xl text-gray-500 font-medium mb-6 text-center max-w-xl leading-relaxed">{description}</p>}
     <div className="w-full max-w-xl flex flex-col gap-6">
       {children}
     </div>
@@ -57,9 +57,14 @@ const StepLayout = ({ title, description, children }: any) => (
 
 // --- Form Steps ---
 
-const Step1Basics = ({ formData, updateData }: any) => (
-  <StepLayout title="The Basics" description="Start with the most important details of your product.">
+const Step1Name = ({ formData, updateData }: any) => (
+  <StepLayout title="What's your product called?" description="Give your product a name that customers will remember.">
     <FloatingInput label="Product Name" placeholder="e.g. Men's Leather Jacket" value={formData.name} onChange={(e: any) => updateData({ name: e.target.value })} />
+  </StepLayout>
+);
+
+const Step2Details = ({ formData, updateData }: any) => (
+  <StepLayout title="Product Details" description="Categorise and identify your product.">
     <FloatingInput label="Category" placeholder="e.g. Clothing, Electronics" value={formData.category} onChange={(e: any) => updateData({ category: e.target.value })} />
     <FloatingInput label="SKU" placeholder="e.g. BLA-JACKET-001" value={formData.sku} onChange={(e: any) => updateData({ sku: e.target.value })} />
     <div className="space-y-2">
@@ -74,7 +79,7 @@ const Step1Basics = ({ formData, updateData }: any) => (
   </StepLayout>
 );
 
-const Step2Pricing = ({ formData, updateData }: any) => (
+const Step3Pricing = ({ formData, updateData }: any) => (
   <StepLayout title="Pricing & Inventory" description="Set your prices and track how much you have in stock.">
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
       <FloatingInput label="Price" type="number" prefix={formData.currency} value={formData.price} onChange={(e: any) => updateData({ price: parseFloat(e.target.value) || 0 })} />
@@ -88,7 +93,7 @@ const Step2Pricing = ({ formData, updateData }: any) => (
   </StepLayout>
 );
 
-const Step3Content = ({ formData, updateData, updateSEO }: any) => (
+const Step4Content = ({ formData, updateData, updateSEO }: any) => (
   <StepLayout title="Content & SEO" description="Describe your product for customers and search engines.">
     <div className="space-y-2 w-full">
       <label className="text-sm font-semibold text-gray-500 ml-2">Short Description</label>
@@ -119,7 +124,7 @@ const Step3Content = ({ formData, updateData, updateSEO }: any) => (
   </StepLayout>
 );
 
-const Step4Media = ({ formData, updateData }: any) => {
+const Step5Media = ({ formData, updateData }: any) => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
@@ -183,7 +188,7 @@ const Step4Media = ({ formData, updateData }: any) => {
   );
 };
 
-const Step5Review = ({ formData, updateData, isSubmitting }: any) => (
+const Step6Review = ({ formData, updateData, isSubmitting }: any) => (
   <StepLayout title="Final Review" description="Review your product details before publishing to your store.">
     <div className="w-full bg-gray-50 border-2 border-gray-200 rounded-[2.5rem] p-8 space-y-6 shadow-inner">
       <div className="flex items-start gap-6 border-b-2 border-gray-100 pb-6">
@@ -353,12 +358,83 @@ const SuccessScreen = ({ product, storeName }: { product: any, storeName: string
   );
 };
 
+const ProductPreview = ({ formData }: { formData: ProductData }) => {
+  return (
+    <div className="sticky top-6 w-full flex flex-col gap-8">
+      <div className="flex items-center justify-between">
+        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-[0.2em]">Live Preview</h3>
+        <div className="flex gap-1.5">
+          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+          <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Draft Syncing</span>
+        </div>
+      </div>
+
+      <div className="w-full bg-white rounded-[2.5rem] border-2 border-gray-100 overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.04)] flex flex-col group transition-all duration-500 hover:shadow-[0_40px_80px_rgba(0,0,0,0.08)] hover:-translate-y-1">
+        <div className="aspect-[4/5] bg-gray-50 relative overflow-hidden">
+          <AnimatePresence mode="wait">
+            {formData.images[0] ? (
+              <motion.img 
+                key={formData.images[0]}
+                initial={{ opacity: 0, scale: 1.1 }}
+                animate={{ opacity: 1, scale: 1 }}
+                src={formData.images[0]} 
+                className="w-full h-full object-cover" 
+                alt={formData.name} 
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-gray-200">
+                <svg className="w-24 h-24 stroke-[0.5]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+              </div>
+            )}
+          </AnimatePresence>
+          <div className="absolute top-6 left-6 flex flex-col gap-2">
+            <span className="bg-white/90 backdrop-blur-md px-4 py-2 rounded-full text-[10px] font-bold tracking-widest uppercase text-black border border-white/20 shadow-sm">{formData.category || "New Arrival"}</span>
+          </div>
+        </div>
+        <div className="p-8 flex flex-col gap-4">
+          <div className="flex justify-between items-start gap-4">
+            <div className="flex-1 min-w-0">
+               <h3 className="text-2xl font-bold text-black leading-tight line-clamp-2">{formData.name || "Product Name"}</h3>
+               <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mt-1">{formData.sku || "SKU-AUTO-GEN"}</p>
+            </div>
+            <div className="text-right flex-shrink-0">
+               <p className="text-2xl font-black text-black">{formData.currency} {formData.price?.toLocaleString() || "0"}</p>
+               {formData.compareAtPrice > 0 && <p className="text-sm font-bold text-gray-400 line-through">{formData.currency} {formData.compareAtPrice.toLocaleString()}</p>}
+            </div>
+          </div>
+          
+          <div className="h-px bg-gray-100 my-2"></div>
+          
+          <p className="text-gray-500 font-medium line-clamp-3 text-sm leading-relaxed min-h-[4.5rem]">
+            {formData.shortDescription || formData.description || "Start describing your product to see it come to life in this preview."}
+          </p>
+          
+          <button className="w-full bg-black text-white py-5 rounded-2xl font-bold uppercase tracking-[0.2em] text-[10px] hover:bg-gray-800 transition-all mt-4 shadow-lg shadow-black/10">Add to Cart</button>
+        </div>
+      </div>
+
+      <div className="bg-indigo-50/50 border border-indigo-100/50 rounded-2xl p-6">
+        <div className="flex gap-4">
+           <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
+              <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+           </div>
+           <div>
+              <h4 className="font-bold text-indigo-900 text-sm">Design Tip</h4>
+              <p className="text-indigo-700/70 text-xs font-medium mt-1 leading-relaxed">High-quality images with clean backgrounds increase conversion by up to 40%.</p>
+           </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // --- Main Page Component ---
 
 export default function AddProductPage() {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [createdProduct, setCreatedProduct] = useState<any>(null);
   const [storeName, setStoreName] = useState("");
@@ -433,23 +509,26 @@ export default function AddProductPage() {
   const updateSEO = (updates: Partial<ProductData['seo']>) => setFormData(prev => ({ ...prev, seo: { ...prev.seo, ...updates } }));
 
   const steps = [
-    <Step1Basics key="s1" formData={formData} updateData={updateData} />,
-    <Step2Pricing key="s2" formData={formData} updateData={updateData} />,
-    <Step3Content key="s3" formData={formData} updateData={updateData} updateSEO={updateSEO} />,
-    <Step4Media key="s4" formData={formData} updateData={updateData} />,
-    <Step5Review key="s5" formData={formData} updateData={updateData} isSubmitting={isSubmitting} />
+    <Step1Name key="s1" formData={formData} updateData={updateData} />,
+    <Step2Details key="s2" formData={formData} updateData={updateData} />,
+    <Step3Pricing key="s3" formData={formData} updateData={updateData} />,
+    <Step4Content key="s4" formData={formData} updateData={updateData} updateSEO={updateSEO} />,
+    <Step5Media key="s5" formData={formData} updateData={updateData} />,
+    <Step6Review key="s6" formData={formData} updateData={updateData} isSubmitting={isSubmitting} />
   ];
 
   const validateStep = () => {
     setError(null);
     if (step === 0) {
       if (!formData.name.trim()) return "Product Name is required.";
-      if (!formData.category.trim()) return "Category is required.";
     }
     if (step === 1) {
+      if (!formData.category.trim()) return "Category is required.";
+    }
+    if (step === 2) {
       if (formData.price <= 0) return "Valid Price is required.";
     }
-    if (step === 3) {
+    if (step === 4) {
       if (formData.images.length === 0) return "Please upload at least one image.";
     }
     return null;
@@ -459,6 +538,60 @@ export default function AddProductPage() {
     const valetErr = validateStep();
     if (valetErr) {
       setError(valetErr);
+      return;
+    }
+
+    if (step === 0) {
+      // Trigger AI Generation on first step
+      setIsGenerating(true);
+      setError(null);
+      try {
+        const response = await ProductService.generateProductContent({
+          productName: formData.name,
+          currency: formData.currency,
+          storeCategoryHint: formData.category || ""
+        });
+
+        if (response.success && response.data) {
+          const aiData = response.data;
+          setFormData(prev => ({
+            ...prev,
+            category: aiData.category || prev.category,
+            price: aiData.possiblePrice || prev.price,
+            shortDescription: aiData.shortDescription || prev.shortDescription,
+            description: aiData.description || prev.description,
+            tags: aiData.tags || prev.tags,
+            seo: {
+              ...prev.seo,
+              title: aiData.metaTitle || prev.seo.title,
+              description: aiData.metaDescription || prev.seo.description,
+              slug: prev.seo.slug || formData.name.toLowerCase().trim().replace(/\s+/g, '-')
+            }
+          }));
+        } else {
+          setFormData(prev => ({
+            ...prev,
+            seo: {
+              ...prev.seo,
+              slug: prev.seo.slug || formData.name.toLowerCase().trim().replace(/\s+/g, '-')
+            }
+          }));
+        }
+      } catch (err) {
+        console.error("AI Generation failed", err);
+        // Even if AI fails, at least set the slug
+        setFormData(prev => ({
+          ...prev,
+          seo: {
+            ...prev.seo,
+            slug: prev.seo.slug || formData.name.toLowerCase().trim().replace(/\s+/g, '-')
+          }
+        }));
+      } finally {
+        setIsGenerating(false);
+        setStep(step + 1);
+        window.scrollTo(0, 0);
+      }
       return;
     }
 
@@ -473,7 +606,7 @@ export default function AddProductPage() {
         // Sync SEO defaults if empty
         const finalData = { ...formData };
         if (!finalData.seo.title) finalData.seo.title = finalData.name;
-        if (!finalData.seo.slug) finalData.seo.slug = finalData.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
+        if (!finalData.seo.slug) finalData.seo.slug = finalData.name.toLowerCase().trim().replace(/\s+/g, '-');
         if (!finalData.seo.description) finalData.seo.description = finalData.shortDescription || finalData.name;
         
         const response = await ProductService.createProduct(finalData);
@@ -507,30 +640,40 @@ export default function AddProductPage() {
 
   return (
     <div className="min-h-screen bg-white text-black font-sans pb-32">
-      {/* Header */}
-      <div className="max-w-4xl mx-auto px-6 pt-12 flex items-center justify-between">
-        <button onClick={handleBack} className="w-12 h-12 rounded-full border-2 border-gray-100 flex items-center justify-center hover:border-black transition-colors">
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
-        </button>
-        <div className="flex-1 text-center">
-          <span className="text-xs font-bold text-gray-400 uppercase tracking-[0.2em]">Step {step + 1} of {steps.length}</span>
-        </div>
-        <div className="w-12 h-12"></div>
-      </div>
+      <div className="flex flex-col lg:flex-row min-h-screen">
+        {/* Left Side: Wizard */}
+        <div className="flex-1 flex flex-col">
+          {/* Header */}
+          <div className="max-w-4xl w-full mx-auto px-6 pt-6 flex items-center justify-between">
+            <button onClick={handleBack} className="w-12 h-12 rounded-full border-2 border-gray-100 flex items-center justify-center hover:border-black transition-colors">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+            </button>
+            <div className="flex-1 text-center">
+              <span className="text-xs font-bold text-gray-400 uppercase tracking-[0.2em]">Step {step + 1} of {steps.length}</span>
+            </div>
+            <div className="w-12 h-12"></div>
+          </div>
 
-      <main className="max-w-4xl mx-auto px-6 pt-16 flex flex-col justify-center">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={step}
-            initial={{ opacity: 0, scale: 0.98, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.98, y: -10 }}
-            transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
-          >
-            {steps[step]}
-          </motion.div>
-        </AnimatePresence>
-      </main>
+          <main className="max-w-4xl w-full mx-auto px-6 pt-6 flex-1 flex flex-col">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={step}
+                initial={{ opacity: 0, scale: 0.98, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.98, y: -10 }}
+                transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
+              >
+                {steps[step]}
+              </motion.div>
+            </AnimatePresence>
+          </main>
+        </div>
+
+        {/* Right Side: Preview (Hidden on Laptop/Tablets) */}
+        <div className="hidden xl:block w-[450px] border-l-2 border-gray-100 bg-gray-50/30 p-12 overflow-y-auto">
+          <ProductPreview formData={formData} />
+        </div>
+      </div>
 
       <ProgressBar currentStep={step} totalSteps={steps.length} />
 
@@ -549,13 +692,18 @@ export default function AddProductPage() {
             {error && <span className="sm:hidden text-red-500 font-bold text-xs flex-1 text-center">{error}</span>}
             <button
               onClick={handleNext}
-              disabled={isSubmitting}
-              className={`bg-black text-white px-10 py-4 rounded-[1.25rem] text-lg font-bold hover:bg-gray-800 transition-all shadow-xl shadow-black/10 flex items-center justify-center gap-3 w-full sm:w-auto ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+              disabled={isSubmitting || isGenerating}
+              className={`bg-black text-white px-10 py-4 rounded-[1.25rem] text-lg font-bold hover:bg-gray-800 transition-all shadow-xl shadow-black/10 flex items-center justify-center gap-3 w-full sm:w-auto ${(isSubmitting || isGenerating) ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               {isSubmitting ? (
                 <>
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                   Processing...
+                </>
+              ) : isGenerating ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  Generating suggestions...
                 </>
               ) : (
                 step === steps.length - 1 ? 'Publish Product' : 'Continue'

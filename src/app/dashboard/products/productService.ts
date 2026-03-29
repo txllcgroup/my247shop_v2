@@ -240,4 +240,25 @@ export class ProductService {
     if (!res.ok) throw new Error('Failed to delete variant');
     return await res.json();
   }
+
+  static async generateProductContent(params: { productName: string, currency: string, storeCategoryHint?: string }) {
+    const res = await fetch('https://my247v2.airshop247.com/api/product-content-ai/generate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        productName: params.productName,
+        currency: params.currency,
+        storeCategoryHint: params.storeCategoryHint || ""
+      })
+    });
+
+    if (!res.ok) {
+      const errorMsg = await res.text();
+      throw new Error(errorMsg || 'Failed to generate content');
+    }
+
+    return await res.json();
+  }
 }
