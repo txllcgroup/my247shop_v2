@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
         statusBarStyle: 'black-translucent',
       },
       icons: {
-        apple: storeData?.logoUrl || `/api/store/${slug}/icon`,
+        apple: storeData?.logoUrl || `/api/store/${slug}/icon?size=180`,
       }
     };
   } catch (error) {

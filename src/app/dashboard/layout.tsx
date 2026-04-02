@@ -7,6 +7,7 @@ const Joyride = dynamic(() => import('@list-labs/react-joyride'), { ssr: false }
 import { CallBackProps, STATUS, Step } from '@list-labs/react-joyride';
 import { AuthGuard } from '@/components/AuthGuard';
 import { LoginService } from '../login/loginService';
+import QRCodeModal from './components/QRCodeModal';
 
 // Assuming we use standard Lucide-style SVG icons for navigation
 const navItems = [
@@ -28,6 +29,7 @@ export default function DashboardLayout({
   const router = useRouter();
   const [runTutorial, setRunTutorial] = useState(false);
   const [profile, setProfile] = useState<any>(null);
+  const [isQRModalOpen, setIsQRModalOpen] = useState(false);
 
   const steps: Step[] = React.useMemo(() => [
     {
@@ -181,6 +183,15 @@ export default function DashboardLayout({
             </div>
 
             <div className="flex items-center gap-2 sm:gap-4">
+              <button
+                onClick={() => setIsQRModalOpen(true)}
+                className="hidden lg:flex items-center justify-center gap-2 border-2 border-gray-200 text-black px-5 py-3 rounded-2xl text-sm font-bold hover:bg-gray-50 hover:border-black transition-all ml-2 shrink-0 group"
+              >
+                <svg className="w-5 h-5 text-gray-400 group-hover:text-black transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M12 4v1m0 11v1m4-8h1m-11 0h1m2-2h5a2 2 0 012 2v5a2 2 0 01-2 2h-5a2 2 0 01-2-2v-5a2 2 0 012-2zM7 7h1v1H7V7zm10 0h1v1h-1V7zM7 17h1v1H7v-1z" /></svg>
+                <span className="hidden xl:inline">Store QR Code</span>
+                <span className="xl:hidden">Store QR</span>
+              </button>
+
               <StoreLinkHeader profile={profile} />
 
               <button className="hidden sm:flex w-12 h-12 border-2 border-gray-200 rounded-full items-center justify-center text-black hover:bg-gray-50 hover:border-black transition-colors relative shrink-0">
@@ -251,6 +262,13 @@ export default function DashboardLayout({
               lineHeight: '1.5'
             }
           }}
+        />
+
+        <QRCodeModal 
+          isOpen={isQRModalOpen} 
+          onClose={() => setIsQRModalOpen(false)} 
+          storeName={profile?.storeName || 'My Store'} 
+          storeUrl={`https://my247.shop/store/${profile?.storeName?.replace(/\s+/g, '%20') || 'my-store'}`}
         />
 
         {/* Mobile Bottom Tab Bar - Solid flat white */}

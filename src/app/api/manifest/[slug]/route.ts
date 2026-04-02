@@ -26,19 +26,22 @@ export async function GET(
       theme_color: '#000000',
       icons: [
         {
-          src: iconUrl,
-          sizes: 'any', // If external URL
-          type: 'image/png',
-        },
-        {
-          src: `/api/store/${slug}/icon`,
+          src: iconUrl.includes('?') ? iconUrl : `${iconUrl}?size=512`,
           sizes: '512x512',
           type: 'image/png',
+          purpose: 'any maskable',
         },
         {
-          src: `/api/store/${slug}/icon`,
+          src: `/api/store/${slug}/icon?size=192`,
           sizes: '192x192',
           type: 'image/png',
+          purpose: 'any maskable',
+        },
+        {
+          src: `/api/store/${slug}/icon?size=180`,
+          sizes: '180x180',
+          type: 'image/png',
+          purpose: 'any maskable',
         }
       ],
     };
