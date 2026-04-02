@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { QRCodeSVG } from 'qrcode.react';
+import { QRCode } from 'react-qrcode-logo';
 
 interface QRCodeModalProps {
   isOpen: boolean;
@@ -87,23 +87,12 @@ export default function QRCodeModal({ isOpen, onClose, storeName, storeUrl }: QR
       ctx.fill();
 
       // 5. Render QR Code to the canvas
-      const svgElement = document.getElementById('qr-preview-svg') as unknown as SVGSVGElement;
-      if (svgElement) {
-        const svgData = new XMLSerializer().serializeToString(svgElement);
-        const svgBase64 = `data:image/svg+xml;base64,${btoa(svgData)}`;
-        
-        const img = new Image();
-        img.src = svgBase64;
-        
-        await new Promise((resolve) => {
-          img.onload = () => {
-            const qrSize = 1400;
-            const x = (width - qrSize) / 2;
-            const y = 800; // Positioned inside the white box
-            ctx.drawImage(img, x, y, qrSize, qrSize);
-            resolve(true);
-          };
-        });
+      const qrCanvas = document.getElementById('qr-preview-canvas') as HTMLCanvasElement;
+      if (qrCanvas) {
+        const qrSize = 1400;
+        const x = (width - qrSize) / 2;
+        const y = 800; // Positioned inside the white box
+        ctx.drawImage(qrCanvas, x, y, qrSize, qrSize);
       }
 
       // 6. Trigger download
@@ -160,13 +149,14 @@ export default function QRCodeModal({ isOpen, onClose, storeName, storeUrl }: QR
 
                   {/* QR Box */}
                   <div className="flex-1 bg-white m-4 mt-0 rounded-2xl p-6 flex items-center justify-center">
-                    <QRCodeSVG 
-                      id="qr-preview-svg"
-                      value={storeUrl} 
+                    <QRCode
+                      id="qr-preview-canvas"
+                      value={storeUrl}
                       size={200}
                       fgColor={fgColor}
-                      bgColor="transparent"
-                      level="H"
+                      bgColor="#ffffff"
+                      ecLevel="H"
+                      qrStyle="squares"
                     />
                   </div>
                </div>
