@@ -1,7 +1,7 @@
-import { MetadataRoute } from 'next';
+import { NextResponse } from 'next/server';
 
-export default function manifest(): MetadataRoute.Manifest {
-  return {
+export async function GET() {
+  const manifest = {
     name: 'My247Shop',
     short_name: 'My247',
     description: 'My247Shop E-commerce Application',
@@ -28,4 +28,10 @@ export default function manifest(): MetadataRoute.Manifest {
       },
     ],
   };
+
+  return NextResponse.json(manifest, {
+    headers: {
+      'Content-Type': 'application/manifest+json',
+    },
+  });
 }
