@@ -23,6 +23,7 @@
     "react-confetti": "^6.4.0",
     "react-dom": "19.2.3",
     "react-paystack-19": "^6.0.0",
+    "react-qrcode-logo": "^4.0.0",
     "react-use": "^17.6.0",
     "stripe": "^20.4.1"
   },
