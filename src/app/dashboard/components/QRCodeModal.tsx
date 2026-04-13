@@ -186,7 +186,6 @@ export default function QRCodeModal({ isOpen, onClose, storeName, storeUrl }: QR
                       <div className="w-10 h-10 border-2 border-black/10 border-t-black rounded-full animate-spin" />
                     )}
                   </div>
-                  </div>
                </div>
                <p className="mt-6 text-gray-400 text-xs font-semibold uppercase tracking-widest">Branded Card Preview</p>
             </div>
