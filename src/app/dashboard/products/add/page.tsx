@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ProductService, ProductData, ProductVariant } from '../productService';
+import OptimizingOverlay from '@/components/OptimizingOverlay';
 
 import { useWindowSize } from 'react-use';
 import dynamic from 'next/dynamic';
@@ -126,7 +127,42 @@ const Step4Content = ({ formData, updateData, updateSEO }: any) => (
 
 const Step5Media = ({ formData, updateData }: any) => {
   const [isUploading, setIsUploading] = useState(false);
+  const [isOptimizing, setIsOptimizing] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const handleOptimizeImage = async () => {
+    if (formData.images.length === 0) return;
+    
+    // Optimize the first image (cover image)
+    const targetUrl = formData.images[0];
+    
+    setIsOptimizing(true);
+    setUploadError(null);
+
+    try {
+      // 1. Fetch image as blob
+      const response = await fetch(targetUrl);
+      if (!response.ok) throw new Error("Failed to fetch image for processing");
+      const blob = await response.blob();
+      
+      // 2. Call optimize endpoint
+      const result = await ProductService.optimizeImage(blob, "Make this product look premium");
+      
+      if (result.success && result.data?.optimizedImageUrl) {
+        // 3. Update images array
+        const newImages = [...formData.images];
+        newImages[0] = result.data.optimizedImageUrl;
+        updateData({ images: newImages });
+      } else {
+        throw new Error(result.message || "Optimization failed");
+      }
+    } catch (err: any) {
+      console.error(err);
+      setUploadError(`Optimization Error: ${err.message}`);
+    } finally {
+      setIsOptimizing(false);
+    }
+  };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
@@ -166,6 +202,22 @@ const Step5Media = ({ formData, updateData }: any) => {
       </label>
 
       {uploadError && <p className="text-red-500 text-sm font-semibold text-center">{uploadError}</p>}
+
+      {formData.images.length > 0 && (
+        <div className="w-full flex justify-end -mb-2 mt-4">
+          <button
+            type="button"
+            onClick={handleOptimizeImage}
+            disabled={isOptimizing || isUploading}
+            className={`text-xs font-bold text-indigo-600 bg-indigo-50 px-4 py-2 rounded-full hover:bg-indigo-100 transition-all flex items-center gap-2 border border-indigo-100/50 ${isOptimizing ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" /></svg>
+            {isOptimizing ? 'Optimising...' : 'Optimise Image'}
+          </button>
+        </div>
+      )}
+
+      <OptimizingOverlay isVisible={isOptimizing} />
 
       <div className="grid grid-cols-3 gap-4 mt-6">
         {formData.images.map((url: string, i: number) => (
@@ -275,8 +327,8 @@ const SuccessScreen = ({ product, storeName }: { product: any, storeName: string
   return (
     <div className="fixed inset-0 bg-white z-[100] flex flex-col items-center justify-center p-6 md:p-12 overflow-y-auto">
       <Confetti width={width} height={height} recycle={false} numberOfPieces={500} gravity={0.1} />
-      
-      <motion.div 
+
+      <motion.div
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         className="max-w-xl w-full text-center space-y-10 py-12"
@@ -290,65 +342,65 @@ const SuccessScreen = ({ product, storeName }: { product: any, storeName: string
         </div>
 
         <div className="bg-gray-50 border-2 border-gray-100 rounded-[2.5rem] p-8 space-y-6">
-           <div className="flex items-center gap-6">
-              <div className="w-20 h-20 rounded-2xl border-2 border-white bg-white overflow-hidden shadow-sm flex-shrink-0">
-                 {product.images?.[0] ? (
-                   <img src={product.images[0]} className="w-full h-full object-cover" />
-                 ) : (
-                   <div className="w-full h-full flex items-center justify-center text-gray-200 bg-gray-50">
-                     <svg className="w-8 h-8 font-thin" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                   </div>
-                 )}
+          <div className="flex items-center gap-6">
+            <div className="w-20 h-20 rounded-2xl border-2 border-white bg-white overflow-hidden shadow-sm flex-shrink-0">
+              {product.images?.[0] ? (
+                <img src={product.images[0]} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-gray-200 bg-gray-50">
+                  <svg className="w-8 h-8 font-thin" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                </div>
+              )}
+            </div>
+            <div className="text-left flex-1 min-w-0">
+              <h3 className="font-bold text-2xl text-black truncate">{product.name}</h3>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-emerald-600 font-bold">Active</span>
+                <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
+                <span className="text-gray-500 font-semibold">{product.currency} {product.price}</span>
               </div>
-              <div className="text-left flex-1 min-w-0">
-                 <h3 className="font-bold text-2xl text-black truncate">{product.name}</h3>
-                 <div className="flex items-center gap-2 mt-1">
-                    <span className="text-emerald-600 font-bold">Active</span>
-                    <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
-                    <span className="text-gray-500 font-semibold">{product.currency} {product.price}</span>
-                 </div>
-              </div>
-           </div>
+            </div>
+          </div>
 
-           <div className="flex flex-col sm:flex-row gap-4 pt-4">
-              <button 
-                onClick={handleShare}
-                className="flex-1 bg-black text-white px-8 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-gray-800 transition-all shadow-lg shadow-black/10"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
-                Share Product
-              </button>
-              <button 
-                onClick={handleCopy}
-                className={`flex-1 px-8 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 border-2 transition-all ${copied ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-white border-gray-200 text-black hover:border-black'}`}
-              >
-                {copied ? (
-                  <>
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                    Copied!
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
-                    Copy Link
-                  </>
-                )}
-              </button>
-           </div>
+          <div className="flex flex-col sm:flex-row gap-4 pt-4">
+            <button
+              onClick={handleShare}
+              className="flex-1 bg-black text-white px-8 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-gray-800 transition-all shadow-lg shadow-black/10"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+              Share Product
+            </button>
+            <button
+              onClick={handleCopy}
+              className={`flex-1 px-8 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 border-2 transition-all ${copied ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-white border-gray-200 text-black hover:border-black'}`}
+            >
+              {copied ? (
+                <>
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                  Copied!
+                </>
+              ) : (
+                <>
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
+                  Copy Link
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-col gap-4 pt-6 max-w-sm mx-auto">
-          <button 
-             onClick={() => {
-               window.location.reload();
-             }}
-             className="w-full text-black font-bold text-lg hover:bg-gray-50 py-4 rounded-2xl transition-all"
+          <button
+            onClick={() => {
+              window.location.reload();
+            }}
+            className="w-full text-black font-bold text-lg hover:bg-gray-50 py-4 rounded-2xl transition-all"
           >
             Add Another Product
           </button>
-          <button 
-             onClick={() => router.push('/dashboard/products')}
-             className="w-full text-gray-400 font-semibold hover:text-black transition-colors"
+          <button
+            onClick={() => router.push('/dashboard/products')}
+            className="w-full text-gray-400 font-semibold hover:text-black transition-colors"
           >
             Go to Products List
           </button>
@@ -373,13 +425,13 @@ const ProductPreview = ({ formData }: { formData: ProductData }) => {
         <div className="aspect-[4/5] bg-gray-50 relative overflow-hidden">
           <AnimatePresence mode="wait">
             {formData.images[0] ? (
-              <motion.img 
+              <motion.img
                 key={formData.images[0]}
                 initial={{ opacity: 0, scale: 1.1 }}
                 animate={{ opacity: 1, scale: 1 }}
-                src={formData.images[0]} 
-                className="w-full h-full object-cover" 
-                alt={formData.name} 
+                src={formData.images[0]}
+                className="w-full h-full object-cover"
+                alt={formData.name}
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-gray-200">
@@ -394,34 +446,34 @@ const ProductPreview = ({ formData }: { formData: ProductData }) => {
         <div className="p-8 flex flex-col gap-4">
           <div className="flex justify-between items-start gap-4">
             <div className="flex-1 min-w-0">
-               <h3 className="text-2xl font-bold text-black leading-tight line-clamp-2">{formData.name || "Product Name"}</h3>
-               <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mt-1">{formData.sku || "SKU-AUTO-GEN"}</p>
+              <h3 className="text-2xl font-bold text-black leading-tight line-clamp-2">{formData.name || "Product Name"}</h3>
+              <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mt-1">{formData.sku || "SKU-AUTO-GEN"}</p>
             </div>
             <div className="text-right flex-shrink-0">
-               <p className="text-2xl font-black text-black">{formData.currency} {formData.price?.toLocaleString() || "0"}</p>
-               {formData.compareAtPrice > 0 && <p className="text-sm font-bold text-gray-400 line-through">{formData.currency} {formData.compareAtPrice.toLocaleString()}</p>}
+              <p className="text-2xl font-black text-black">{formData.currency} {formData.price?.toLocaleString() || "0"}</p>
+              {formData.compareAtPrice > 0 && <p className="text-sm font-bold text-gray-400 line-through">{formData.currency} {formData.compareAtPrice.toLocaleString()}</p>}
             </div>
           </div>
-          
+
           <div className="h-px bg-gray-100 my-2"></div>
-          
+
           <p className="text-gray-500 font-medium line-clamp-3 text-sm leading-relaxed min-h-[4.5rem]">
             {formData.shortDescription || formData.description || "Start describing your product to see it come to life in this preview."}
           </p>
-          
+
           <button className="w-full bg-black text-white py-5 rounded-2xl font-bold uppercase tracking-[0.2em] text-[10px] hover:bg-gray-800 transition-all mt-4 shadow-lg shadow-black/10">Add to Cart</button>
         </div>
       </div>
 
       <div className="bg-indigo-50/50 border border-indigo-100/50 rounded-2xl p-6">
         <div className="flex gap-4">
-           <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
-              <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-           </div>
-           <div>
-              <h4 className="font-bold text-indigo-900 text-sm">Design Tip</h4>
-              <p className="text-indigo-700/70 text-xs font-medium mt-1 leading-relaxed">High-quality images with clean backgrounds increase conversion by up to 40%.</p>
-           </div>
+          <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
+            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          </div>
+          <div>
+            <h4 className="font-bold text-indigo-900 text-sm">Design Tip</h4>
+            <p className="text-indigo-700/70 text-xs font-medium mt-1 leading-relaxed">High-quality images with clean backgrounds increase conversion by up to 40%.</p>
+          </div>
         </div>
       </div>
     </div>
@@ -608,7 +660,7 @@ export default function AddProductPage() {
         if (!finalData.seo.title) finalData.seo.title = finalData.name;
         if (!finalData.seo.slug) finalData.seo.slug = finalData.name.toLowerCase().trim().replace(/\s+/g, '-');
         if (!finalData.seo.description) finalData.seo.description = finalData.shortDescription || finalData.name;
-        
+
         const response = await ProductService.createProduct(finalData);
         if (response.success) {
           setCreatedProduct(response.data);

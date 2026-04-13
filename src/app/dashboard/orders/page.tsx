@@ -11,6 +11,7 @@ export default function OrdersPage() {
   const [totalCount, setTotalCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
+  const [currency, setCurrency] = useState('NGN');
   const pageSize = 20;
 
   const fetchOrders = async () => {
@@ -63,6 +64,28 @@ export default function OrdersPage() {
   };
 
   useEffect(() => {
+    const storedCurrency = localStorage.getItem('currency');
+    const storedCountry = localStorage.getItem('country');
+    const profileStr = localStorage.getItem('profile');
+
+    let curr = storedCurrency || "NGN";
+    let country = storedCountry || "";
+
+    if (profileStr) {
+      try {
+        const profile = JSON.parse(profileStr);
+        curr = profile.currency || curr;
+        country = profile.country || country;
+      } catch (e) {
+        console.error("Error parsing profile for currency", e);
+      }
+    }
+
+    if (country && country !== "Nigeria") {
+      curr = "USD";
+    }
+    setCurrency(curr);
+
     if (page > 1) {
       fetchOrders();
     }
@@ -185,7 +208,7 @@ export default function OrdersPage() {
                       </span>
                     </td>
                     <td className="px-6 py-5 text-right font-bold text-black text-lg relative z-10 whitespace-nowrap">
-                      {order.currency} {order.totalAmount.toLocaleString()}
+                      {currency} {order.totalAmount.toLocaleString()}
                     </td>
                   </tr>
                 ))

@@ -1,4 +1,4 @@
-const BASE_URL = 'https://my247v2.airshop247.com/api';
+import ApiClient from '@/lib/apiClient';
 
 export interface TopProduct {
     productId: string;
@@ -55,21 +55,8 @@ export interface AnalyticsResponse {
 }
 
 export class AnalyticsService {
-    private static getHeaders() {
-        const token = localStorage.getItem('token');
-        return {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-        };
-    }
-
     static async getAnalytics(storeId: string): Promise<AnalyticsResponse> {
-        const response = await fetch(`${BASE_URL}/analytics/store/${storeId}`, {
-            headers: this.getHeaders()
-        });
-        if (!response.ok) {
-            throw new Error('Failed to fetch analytics');
-        }
-        return response.json();
+        return ApiClient.get(`/analytics/store/${storeId}`);
     }
 }
+

@@ -10,6 +10,7 @@ export default function OrderDetailsPage({ params }: { params: Promise<{ id: str
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [currency, setCurrency] = useState('NGN');
   const [paymentData, setPaymentData] = useState({ paymentMethod: 'Card', reference: '' });
 
   const fetchOrder = async () => {
@@ -31,6 +32,28 @@ export default function OrderDetailsPage({ params }: { params: Promise<{ id: str
   };
 
   useEffect(() => {
+    const storedCurrency = localStorage.getItem('currency');
+    const storedCountry = localStorage.getItem('country');
+    const profileStr = localStorage.getItem('profile');
+
+    let curr = storedCurrency || "NGN";
+    let country = storedCountry || "";
+
+    if (profileStr) {
+      try {
+        const profile = JSON.parse(profileStr);
+        curr = profile.currency || curr;
+        country = profile.country || country;
+      } catch (e) {
+        console.error("Error parsing profile for currency", e);
+      }
+    }
+
+    if (country && country !== "Nigeria") {
+      curr = "USD";
+    }
+    setCurrency(curr);
+
     fetchOrder();
   }, [resolvedParams.id]);
 
@@ -296,9 +319,9 @@ export default function OrderDetailsPage({ params }: { params: Promise<{ id: str
                                </div>
                             </div>
                          </td>
-                         <td className="px-4 py-5 text-right font-semibold text-black text-sm md:text-base whitespace-nowrap">{order.currency} {item.unitPrice.toLocaleString()}</td>
+                         <td className="px-4 py-5 text-right font-semibold text-black text-sm md:text-base whitespace-nowrap">{currency} {item.unitPrice.toLocaleString()}</td>
                          <td className="px-4 py-5 text-center font-semibold text-black text-sm md:text-base">{item.quantity}</td>
-                         <td className="px-4 py-5 text-right font-bold text-black text-base md:text-lg whitespace-nowrap">{order.currency} {item.totalPrice.toLocaleString()}</td>
+                         <td className="px-4 py-5 text-right font-bold text-black text-base md:text-lg whitespace-nowrap">{currency} {item.totalPrice.toLocaleString()}</td>
                       </tr>
                     ))}
                  </tbody>
@@ -329,25 +352,25 @@ export default function OrderDetailsPage({ params }: { params: Promise<{ id: str
                <div className="space-y-4">
                   <div className="flex justify-between items-center text-lg">
                      <span className="text-gray-500 font-medium">Subtotal</span>
-                     <span className="text-black font-semibold">{order.currency} {order.subtotal.toLocaleString()}</span>
+                     <span className="text-black font-semibold">{currency} {order.subtotal.toLocaleString()}</span>
                   </div>
                   {order.discountAmount > 0 && (
                     <div className="flex justify-between items-center text-lg">
                        <span className="text-gray-500 font-medium">Discount</span>
-                       <span className="text-emerald-600 font-semibold">-{order.currency} {order.discountAmount.toLocaleString()}</span>
+                       <span className="text-emerald-600 font-semibold">-{currency} {order.discountAmount.toLocaleString()}</span>
                     </div>
                   )}
                   <div className="flex justify-between items-center text-lg">
                      <span className="text-gray-500 font-medium">Shipping</span>
-                     <span className="text-black font-semibold">{order.currency} {order.shippingAmount.toLocaleString()}</span>
+                     <span className="text-black font-semibold">{currency} {order.shippingAmount.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between items-center text-lg">
                      <span className="text-gray-500 font-medium">Tax</span>
-                     <span className="text-black font-semibold">{order.currency} {order.taxAmount.toLocaleString()}</span>
+                     <span className="text-black font-semibold">{currency} {order.taxAmount.toLocaleString()}</span>
                   </div>
                   <div className="pt-6 border-t-2 border-gray-200 flex justify-between items-center">
                      <span className="text-2xl font-bold text-black">Total</span>
-                     <span className="text-3xl font-bold tracking-tight text-black">{order.currency} {order.totalAmount.toLocaleString()}</span>
+                     <span className="text-3xl font-bold tracking-tight text-black">{currency} {order.totalAmount.toLocaleString()}</span>
                   </div>
                </div>
             </div>

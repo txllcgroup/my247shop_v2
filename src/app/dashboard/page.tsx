@@ -4,112 +4,28 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 const Confetti = dynamic(() => import('react-confetti'), { ssr: false });
 import { useWindowSize } from 'react-use';
-import { usePaystackPayment } from 'react-paystack-19';
 import { OrderService, Order, OrderSummary } from './orders/orderService';
 import { CustomerService } from './customers/customerService';
+import { AnalyticsService, AnalyticsData } from './analytics/analyticsService';
+import { BillingService, BillingWallet } from './billing/billingService';
+import { WalletService, Wallet } from './wallet/walletService';
+import { AuthGuard } from '@/components/AuthGuard';
 
-const subscriptionPlans = [
-  {
-    id: 'starter',
-    plan_name: "Starter",
-    description: "Perfect for small businesses just getting started online.",
-    price: { monthly: 3000, annually: 24000 },
-    priceUsd: { monthly: 2, annually: 16 },
-    features: { max_orders: 10, max_products: 10, ai_assistant: false, broadcast_message: false, image_generation: false, free_transaction_processing: false, support: "basic" }
-  },
-  {
-    id: 'growth',
-    plan_name: "Growth",
-    description: "Best for growing businesses that need more flexibility and marketing tools.",
-    price: { monthly: 4000, annually: 35000 },
-    priceUsd: { monthly: 3, annually: 24 },
-    features: { max_orders: "unlimited", max_products: "unlimited", ai_assistant: true, broadcast_message: true, image_generation: false, free_transaction_processing: false, support: "standard" },
-    isPopular: true
-  },
-  {
-    id: 'pro',
-    plan_name: "Pro",
-    description: "For serious sellers who want the full power of My247Shop.",
-    price: { monthly: 6000, annually: 50000 },
-    priceUsd: { monthly: 4, annually: 34 },
-    features: { max_orders: "unlimited", max_products: "unlimited", ai_assistant: true, broadcast_message: true, image_generation: true, free_transaction_processing: true, support: "priority" }
-  }
-];
-
-const PlanPayButton = ({ plan, billing, profile, currency, onSuccess }: any) => {
-  const isNgn = currency === 'NGN';
-  const amount = isNgn ? plan.price[billing] * 100 : plan.priceUsd[billing] * 100;
-  
-  const config = {
-    reference: `SUB-${plan.plan_name.charAt(0)}-${new Date().getTime()}`,
-    email: profile?.email || "store@my247.com",
-    amount: isNgn ? amount : 0,
-    publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '',
-  };
-  const initializePayment = usePaystackPayment(config);
-  
-  const [isLoading, setIsLoading] = React.useState(false);
-
-  const handleStripeCheckout = async () => {
-    setIsLoading(true);
-    try {
-      const res = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          items: [{
-            productName: `My247Shop ${plan.plan_name} Plan (${billing})`,
-            unitPrice: plan.priceUsd[billing],
-            quantity: 1
-          }],
-          currency: 'usd',
-          successUrl: `${window.location.origin}/dashboard?subscription=success&plan=${billing === 'annually' ? 'annual' : 'monthly'}`,
-          cancelUrl: `${window.location.origin}/dashboard?subscription=cancel`,
-          customerEmail: profile?.email || "store@my247.com",
-          metadata: { planId: plan.id, billingInterval: billing }
-        })
-      });
-      const data = await res.json();
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        alert(data.error || 'Failed to initialize payment');
-      }
-    } catch (err) {
-      console.error(err);
-      alert('An error occurred during checkout.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handlePay = () => {
-    if (isNgn) {
-      initializePayment({ onSuccess, onClose: () => {} });
-    } else {
-      handleStripeCheckout();
-    }
-  };
-
-  return (
-    <button
-      onClick={handlePay}
-      disabled={isLoading}
-      className={`w-full py-4 rounded-xl font-bold transition-all text-[15px] mt-8 shadow-sm ${plan.isPopular ? 'bg-black text-white hover:bg-gray-800 hover:-translate-y-1 hover:shadow-lg' : 'bg-gray-100 text-black hover:bg-gray-200'} ${isLoading ? 'opacity-50 cursor-wait' : ''}`}
-    >
-      {isLoading ? 'Processing...' : `Subscribe to ${plan.plan_name}`}
-    </button>
-  );
-};
-
-const SummaryCard = ({ title, value }: any) => (
-  <div className="bg-white p-6 rounded-2xl border-2 border-gray-200 flex flex-col justify-center">
-    <div className="flex items-center justify-between mb-4">
-      <h3 className="text-gray-500 font-semibold text-sm">{title}</h3>
+const SummaryCard = ({ title, value, icon, subtext, colorClass }: any) => (
+  <div className="bg-white p-8 rounded-[32px] border-2 border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.02)] flex flex-col justify-center relative overflow-hidden group hover:border-black hover:shadow-xl transition-all duration-300">
+    <div className="flex items-center justify-between mb-6 relative z-10">
+      <div className={`w-12 h-12 rounded-[18px] flex items-center justify-center transition-all duration-300 ${colorClass}`}>
+        {icon}
+      </div>
+      <h3 className="text-gray-400 font-bold text-[11px] uppercase tracking-[0.2em]">{title}</h3>
     </div>
-    <div className="flex items-end gap-3">
-      <div className="text-3xl font-semibold tracking-tight text-black">{value}</div>
+    <div className="flex flex-col relative z-10">
+      <div className="text-4xl font-bold tracking-tight text-black flex items-baseline gap-1">
+        {value}
+      </div>
+      {subtext && <div className="text-[13px] font-semibold text-gray-400 mt-2 flex items-center gap-1.5 capitalize">{subtext}</div>}
     </div>
+    <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-gray-50 rounded-full opacity-0 group-hover:opacity-100 group-hover:scale-150 transition-all duration-700 blur-2xl"></div>
   </div>
 );
 
@@ -123,45 +39,19 @@ const getCurrencySymbol = (currency?: string) => {
 
 export default function DashboardHome() {
   const { width, height } = useWindowSize();
-  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
-  const [subscriptionStep, setSubscriptionStep] = useState<'choose' | 'pay-per-tx-success' | 'success'>('choose');
-  const [billingInterval, setBillingInterval] = useState<'monthly' | 'annually'>('monthly');
-  const [paymentCurrency, setPaymentCurrency] = useState<'NGN' | 'USD'>('NGN');
-  
   const [showBroadcastModal, setShowBroadcastModal] = useState(false);
   const [broadcastMessage, setBroadcastMessage] = useState('');
   const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [broadcastSuccess, setBroadcastSuccess] = useState(false);
 
-  const [summary, setSummary] = useState<OrderSummary | null>(null);
-  const [recentOrders, setRecentOrders] = useState<Order[]>([]);
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+  const [billingWallet, setBillingWallet] = useState<BillingWallet | null>(null);
+  const [sellerWallet, setSellerWallet] = useState<Wallet | null>(null);
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [currency, setCurrency] = useState('NGN');
 
   useEffect(() => {
-    // Handle Stripe redirect success
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('subscription') === 'success') {
-      const plan = params.get('plan') || 'monthly';
-      localStorage.setItem('subscription_status', plan);
-      setSubscriptionStep('success');
-      setShowSubscriptionModal(true);
-      window.history.replaceState(null, '', '/dashboard');
-      return;
-    }
-
-    // Check subscription status
-    const status = localStorage.getItem('subscription_status');
-    const isSubscribed = status === 'monthly' || status === 'annual' || status === 'per-tx';
-
-    // Show modal when user gets to the dashboard if not subscribed
-    const timer = setTimeout(() => {
-      if (!isSubscribed) {
-        setShowSubscriptionModal(true);
-      }
-    }, 500);
-
     const storedProfile = localStorage.getItem('profile');
     if (storedProfile) {
       setProfile(JSON.parse(storedProfile));
@@ -177,13 +67,15 @@ export default function DashboardHome() {
         const storeId = localStorage.getItem('storeId') || '';
         if (!storeId) return;
 
-        const [summaryRes, recentRes] = await Promise.all([
-          OrderService.getOrderSummary(storeId),
-          OrderService.getRecentOrders(storeId, 5)
+        const [analyticsRes, billingRes, sellerRes] = await Promise.all([
+          AnalyticsService.getAnalytics(storeId),
+          BillingService.getWallet(),
+          WalletService.getWallet(storeId)
         ]);
 
-        if (summaryRes.success) setSummary(summaryRes.data);
-        if (recentRes.success) setRecentOrders(recentRes.data);
+        if (analyticsRes.success) setAnalytics(analyticsRes.data);
+        setBillingWallet(billingRes);
+        if (sellerRes.success) setSellerWallet(sellerRes.data);
       } catch (err) {
         console.error("Failed to fetch dashboard data", err);
       } finally {
@@ -192,20 +84,7 @@ export default function DashboardHome() {
     };
 
     fetchData();
-    return () => clearTimeout(timer);
   }, []);
-
-  const handlePlanSuccess = (reference: any) => {
-    localStorage.setItem('subscription_status', billingInterval === 'annually' ? 'annual' : 'monthly');
-    setSubscriptionStep('success');
-    setTimeout(() => setShowSubscriptionModal(false), 4000);
-  };
-
-  const handlePayPerTx = () => {
-    localStorage.setItem('subscription_status', 'per-tx');
-    setSubscriptionStep('pay-per-tx-success');
-    setTimeout(() => setShowSubscriptionModal(false), 4000);
-  };
 
   const handleBroadcast = async () => {
     if (!broadcastMessage.trim()) return;
@@ -227,407 +106,313 @@ export default function DashboardHome() {
     }
   };
 
-  return (
-    <div className="max-w-[1400px] mx-auto space-y-8 md:space-y-12 animate-in fade-in duration-500">
+  const symbol = getCurrencySymbol(currency);
 
-      {/* Welcome Header */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-        <div className="w-full md:w-auto">
-          <h1 className="text-3xl md:text-5xl font-medium tracking-tight mb-4 leading-tight">Welcome back, {profile?.fullName || 'Store Owner'}</h1>
-          <p className="text-xl text-gray-500 font-medium max-w-xl leading-relaxed">Here's a breakdown of what's happening with your store today, along with some AI-driven suggestions.</p>
+  return (
+    <AuthGuard>
+      <div className="max-w-[1400px] mx-auto space-y-12 md:space-y-16 animate-in fade-in duration-700 pb-20">
+
+      {/* Hero Welcome Header */}
+      <div className="flex flex-col md:flex-row items-end md:items-center justify-between gap-8 pt-6">
+        <div className="w-full md:w-auto space-y-2">
+          <div className="inline-flex items-center px-4 py-1.5 bg-emerald-50 text-emerald-600 rounded-full text-xs font-bold uppercase tracking-widest mb-2">Live Insights</div>
+          <h1 className="text-4xl md:text-6xl font-medium tracking-tight leading-tight text-black">
+            Welcome, <span className="font-extrabold">{profile?.fullName?.split(' ')[0] || 'Store Owner'}</span>
+          </h1>
+          <p className="text-lg md:text-xl text-gray-500 font-medium max-w-xl leading-relaxed">Everything that matters to your growth, tracked in real-time.</p>
         </div>
 
         <button 
           onClick={() => setShowBroadcastModal(true)}
-          className="bg-black text-white px-8 py-4 rounded-2xl text-lg font-bold hover:bg-gray-800 transition-all shadow-xl hover:-translate-y-1 flex items-center gap-2 group whitespace-nowrap"
+          className="bg-black text-white px-10 py-5 rounded-[24px] text-lg font-bold hover:bg-gray-800 transition-all shadow-2xl hover:-translate-y-1 flex items-center gap-3 group whitespace-nowrap"
         >
-          <svg className="w-5 h-5 group-hover:rotate-12 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" /></svg>
+          <svg className="w-6 h-6 group-hover:rotate-12 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" /></svg>
           Broadcast Message
         </button>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
-        <SummaryCard title="Total Revenue" value={summary ? `${getCurrencySymbol(currency)}${(summary.totalRevenue || 0).toLocaleString()}` : `${getCurrencySymbol(currency)}0.00`} />
-        <SummaryCard title="Total Orders" value={summary?.totalOrders || 0} />
-        <SummaryCard title="Pending Orders" value={summary?.pendingOrders || 0} />
-        <SummaryCard title="Processing" value={summary?.processingOrders || 0} />
+      {/* Primary Snapshot Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
+        <SummaryCard 
+          title="Total Revenue" 
+          value={analytics ? `${symbol}${(analytics.totalRevenue || 0).toLocaleString()}` : `${symbol}0.00`} 
+          subtext={`${getCurrencySymbol(currency)}${(analytics?.averageOrderValue || 0).toLocaleString()} average/order`}
+          colorClass="bg-emerald-50 text-emerald-600"
+          icon={<svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+        />
+        <SummaryCard 
+          title="Settled Balance" 
+          value={sellerWallet ? `${symbol}${(sellerWallet.settledBalance || 0).toLocaleString()}` : `${symbol}0.00`} 
+          subtext={`${symbol}${(sellerWallet?.pendingBalance || 0).toLocaleString()} strictly pending`}
+          colorClass="bg-blue-50 text-blue-600"
+          icon={<svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>}
+        />
+        <SummaryCard 
+          title="Available Credits" 
+          value={billingWallet ? (billingWallet.balanceCredits || 0).toLocaleString() : '0'} 
+          subtext="Used for AI & Platform features"
+          colorClass="bg-purple-50 text-purple-600"
+          icon={<svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>}
+        />
+        <SummaryCard 
+          title="Order Volume" 
+          value={analytics?.totalOrders || 0} 
+          subtext={`${analytics?.fulfilledOrders || 0} commerce orders successful`}
+          colorClass="bg-orange-50 text-orange-600"
+          icon={<svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>}
+        />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8">
-
-        {/* Recent Orders List */}
-        <div className="lg:col-span-2 bg-white rounded-[24px] border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.02)] overflow-hidden flex flex-col h-[480px]">
-          <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-white">
-            <h3 className="font-semibold text-[15px] text-black tracking-tight">Recent Orders</h3>
-            <Link href="/dashboard/orders" className="text-[13px] font-semibold text-gray-400 hover:text-black transition-colors bg-gray-50 hover:bg-gray-100 px-3 py-1.5 rounded-md text-center">View all</Link>
+      {/* Detailed Insights Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+        
+        {/* Sidebar Insights */}
+        <div className="lg:col-span-4 space-y-10">
+          {/* Inventory Health */}
+          <div className="bg-white rounded-[40px] border-2 border-gray-50 p-10 shadow-sm relative overflow-hidden group">
+            <h3 className="text-sm font-bold text-black uppercase tracking-[0.2em] mb-8">Catalogue Health</h3>
+            <div className="space-y-8">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-gray-400 font-bold block text-xs uppercase mb-1">Total SKU's</span>
+                  <span className="text-3xl font-bold text-black">{analytics?.totalProducts || 0}</span>
+                </div>
+                <div className="flex flex-col items-end">
+                  <span className="text-emerald-500 font-bold block text-xs uppercase mb-1">Live</span>
+                  <span className="text-3xl font-bold text-emerald-600">{analytics?.publishedProducts || 0}</span>
+                </div>
+              </div>
+              <div className="relative pt-1">
+                <div className="overflow-hidden h-3 text-xs flex rounded-full bg-gray-100">
+                  <div 
+                    style={{ width: `${analytics?.totalProducts ? (analytics.publishedProducts / analytics.totalProducts) * 100 : 0}%` }}
+                    className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-black transition-all duration-1000"
+                  ></div>
+                </div>
+              </div>
+              <div className={`p-6 rounded-[24px] transition-colors border-2 ${analytics?.lowStockProducts ? 'bg-rose-50 border-rose-100' : 'bg-gray-50 border-gray-100'}`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${analytics?.lowStockProducts ? 'bg-rose-500 text-white' : 'bg-gray-200 text-gray-500'}`}>
+                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                    </div>
+                    <span className="text-sm font-bold text-black capitalize">Inventory Risks</span>
+                  </div>
+                  <span className={`text-xl font-bold ${analytics?.lowStockProducts ? 'text-rose-600' : 'text-gray-400'}`}>{analytics?.lowStockProducts || 0}</span>
+                </div>
+              </div>
+            </div>
+            <Link href="/dashboard/products" className="mt-8 flex items-center justify-center gap-2 py-4 rounded-[20px] bg-black text-white font-bold text-sm hover:bg-gray-800 transition-all">Go to Products</Link>
           </div>
-          <div className="flex-1 overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-gray-100 bg-gray-50/30">
-                  <th className="px-6 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-widest">Order</th>
-                  <th className="px-6 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-widest">Date</th>
-                  <th className="px-6 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-widest">Customer</th>
-                  <th className="px-6 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-widest">Status</th>
-                  <th className="px-6 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-widest text-right">Total</th>
-                </tr>
-              </thead>
-              <tbody className="text-[14px]">
-                {loading ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center text-gray-400 italic">Loading orders...</td>
-                  </tr>
-                ) : recentOrders.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center text-gray-400 italic">No orders found</td>
-                  </tr>
-                ) : recentOrders.map((order) => {
-                  const statusColors: any = {
-                    'Pending': 'text-amber-700 bg-amber-50 border-amber-200',
-                    'Processing': 'text-blue-700 bg-blue-50 border-blue-200',
-                    'Fulfilled': 'text-emerald-700 bg-emerald-50 border-emerald-200',
-                    'Cancelled': 'text-rose-700 bg-rose-50 border-rose-200',
-                    'Returned': 'text-gray-700 bg-gray-50 border-gray-200'
-                  };
-                  return (
-                    <tr key={order.id} onClick={() => window.location.href = `/dashboard/orders/${order.id}`} className="border-b border-gray-50/50 hover:bg-gray-50/50 transition-colors last:border-0 cursor-pointer group">
-                      <td className="px-6 py-4 font-semibold text-black group-hover:text-blue-600 transition-colors">{order.orderNumber}</td>
-                      <td className="px-6 py-4 text-gray-500 font-medium">
-                        {order.placedAt ? new Date(order.placedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'N/A'}
-                      </td>
-                      <td className="px-6 py-4 font-medium text-black truncate max-w-[150px]">{order.customerEmail}</td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2.5 py-1 rounded-[6px] text-[12px] font-semibold border ${statusColors[order.status] || 'text-gray-600 bg-gray-100'}`}>
-                          {order.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 font-semibold text-black text-right">{order.currency} {(order.totalAmount || 0).toLocaleString()}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+
+          {/* Customer Base Section */}
+          <div className="bg-black rounded-[40px] p-10 shadow-2xl relative overflow-hidden text-white group">
+            <div className="absolute top-0 right-0 p-8">
+              <svg className="w-12 h-12 text-white/5 group-hover:text-white/10 transition-colors" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+            </div>
+            <h3 className="text-sm font-bold text-white/40 uppercase tracking-[0.2em] mb-8">Audience Data</h3>
+            <div className="flex items-center gap-8">
+              <div className="relative">
+                <svg className="w-24 h-24 transform -rotate-90">
+                  <circle cx="48" cy="48" r="44" stroke="currentColor" strokeWidth="6" fill="transparent" className="text-white/10" />
+                  <circle cx="48" cy="48" r="44" stroke="currentColor" strokeWidth="6" fill="transparent" className="text-white" strokeDasharray={`${Math.PI * 88}`} strokeDashoffset={`${Math.PI * 88 * (1 - (analytics?.activeCustomers || 0) / (analytics?.totalCustomers || 1))}`} />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                   <span className="text-xl font-black">{analytics?.totalCustomers || 0}</span>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <span className="text-4xl font-black block">{analytics?.activeCustomers || 0}</span>
+                <span className="text-sm font-bold text-white/60 uppercase tracking-widest">Global Reach</span>
+              </div>
+            </div>
+            <Link href="/dashboard/customers" className="mt-10 flex items-center justify-center py-4 rounded-[20px] bg-white text-black font-bold text-sm hover:bg-gray-100 transition-all">Engagement Panel</Link>
           </div>
         </div>
 
-        {/* AI Suggestions / To-Do */}
-        <div className="bg-white rounded-[24px] border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.02)] flex flex-col overflow-hidden h-[480px]">
-          <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
-            <h3 className="font-semibold text-[15px] text-black tracking-tight flex items-center gap-2">
-              <span className="w-6 h-6 rounded-md bg-black text-white flex items-center justify-center">
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-              </span>
-              AI Next Steps
-            </h3>
+        {/* Main Content Areas */}
+        <div className="lg:col-span-8 space-y-10">
+          {/* Commerce Activity Table */}
+          <div className="bg-white rounded-[40px] border-2 border-gray-50 shadow-sm overflow-hidden flex flex-col h-[520px]">
+            <div className="px-10 py-8 border-b-2 border-gray-50 flex justify-between items-center">
+              <h3 className="font-bold text-black text-lg tracking-tight">Recent Commerce activity</h3>
+              <Link href="/dashboard/orders" className="text-[13px] font-bold text-gray-400 hover:text-black transition-all group flex items-center gap-1.5 uppercase tracking-widest">History <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg></Link>
+            </div>
+            <div className="flex-1 overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-gray-50/30">
+                    <th className="px-10 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-widest">Invoice</th>
+                    <th className="px-10 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-widest">Market</th>
+                    <th className="px-10 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-widest">Status</th>
+                    <th className="px-10 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-widest text-right">Sum</th>
+                  </tr>
+                </thead>
+                <tbody className="text-[15px]">
+                  {loading ? (
+                    <tr><td colSpan={4} className="px-10 py-24 text-center text-gray-300 font-bold italic animate-pulse tracking-tight">Syncing data engine...</td></tr>
+                  ) : !analytics?.recentOrders || analytics.recentOrders.length === 0 ? (
+                    <tr><td colSpan={4} className="px-10 py-24 text-center text-gray-400 italic font-medium">No transactions recorded yet</td></tr>
+                  ) : analytics.recentOrders.map((order) => {
+                    const statusColors: any = {
+                      'Pending': 'text-orange-600 bg-orange-50 border-orange-100',
+                      'Processing': 'text-blue-600 bg-blue-50 border-blue-100',
+                      'Fulfilled': 'text-emerald-600 bg-emerald-50 border-emerald-100',
+                      'Cancelled': 'text-rose-600 bg-rose-50 border-rose-100'
+                    };
+                    return (
+                      <tr key={order.orderId} onClick={() => window.location.href = `/dashboard/orders/${order.orderId}`} className="hover:bg-gray-50/80 transition-all cursor-pointer group">
+                        <td className="px-10 py-6 border-b border-gray-50 group-last:border-0">
+                          <span className="font-bold text-black block mb-1 group-hover:underline underline-offset-4">{order.orderNumber}</span>
+                          <span className="text-[12px] font-bold text-gray-400">{new Date(order.placedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                        </td>
+                        <td className="px-10 py-6 border-b border-gray-50 group-last:border-0 font-bold text-gray-500">Retail Order</td>
+                        <td className="px-10 py-6 border-b border-gray-50 group-last:border-0">
+                          <span className={`px-4 py-2 rounded-full text-[11px] font-black tracking-[0.1em] uppercase border ${statusColors[order.status] || 'text-gray-600 bg-gray-100'}`}>
+                            {order.status}
+                          </span>
+                        </td>
+                        <td className="px-10 py-6 border-b border-gray-50 group-last:border-0 font-black text-black text-right text-lg">{analytics.currency} {(order.totalAmount || 0).toLocaleString()}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
-          <div className="p-6 flex-1 flex flex-col gap-6 overflow-y-auto">
 
-            <div className="flex gap-4 items-start group">
-              <div className="w-10 h-10 rounded-full bg-blue-50/50 border border-blue-100 flex items-center justify-center shrink-0 group-hover:bg-blue-50 group-hover:scale-105 transition-all">
-                <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>
-              </div>
-              <div>
-                <h4 className="font-semibold text-black text-[14px] mb-1">Set up custom domain</h4>
-                <p className="text-[13px] font-medium text-gray-500 mb-2 leading-relaxed">Connect your own domain name to build trust and strengthen your brand.</p>
-                <button className="text-[12px] font-semibold text-black border border-gray-200 rounded-[8px] px-3 py-1.5 hover:bg-gray-50 hover:border-black/20 transition-all shadow-sm">Connect domain</button>
-              </div>
+          {/* Performance Snapshot: Top Products */}
+          <div className="bg-white rounded-[40px] border-2 border-gray-50 p-10 shadow-sm transition-all hover:border-black/10">
+            <h3 className="text-sm font-bold text-black uppercase tracking-[0.2em] mb-10">Sales performance leaderboard</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {analytics?.topProducts?.map((p) => (
+                <div key={p.productId} className="flex items-center gap-6 group cursor-pointer p-4 hover:bg-gray-50 rounded-[32px] border-2 border-transparent hover:border-black/5 transition-all">
+                  <div className="w-20 h-20 bg-gray-100 rounded-[24px] overflow-hidden flex items-center justify-center shrink-0 shadow-inner relative">
+                    <img 
+                      src={`https://ui-avatars.com/api/?name=${p.productName}&background=000&color=fff&size=256`} 
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
+                      alt="" 
+                    />
+                    <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors"></div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="font-bold text-black text-lg block truncate mb-1">{p.productName}</span>
+                    <div className="flex items-center gap-3">
+                       <span className="text-[12px] font-black text-emerald-600 uppercase tracking-widest">{symbol} {p.revenue.toLocaleString()}</span>
+                       <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
+                       <span className="text-[12px] font-bold text-gray-400 uppercase tracking-widest">{p.unitsSold} sales</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {(!analytics?.topProducts || analytics.topProducts.length === 0) && (
+                <div className="col-span-2 py-20 text-center text-gray-300 font-bold uppercase tracking-widest italic">No leader data found</div>
+              )}
             </div>
-
-            <div className="flex gap-4 items-start group">
-              <div className="w-10 h-10 rounded-full bg-emerald-50/50 border border-emerald-100 flex items-center justify-center shrink-0 group-hover:bg-emerald-50 group-hover:scale-105 transition-all">
-                <svg className="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-              </div>
-              <div>
-                <h4 className="font-semibold text-black text-[14px] mb-1">Optimize product titles</h4>
-                <p className="text-[13px] font-medium text-gray-500 mb-2 leading-relaxed">AI noticed 3 products with short titles. Longer titles improve search ranking.</p>
-                <button className="text-[12px] font-semibold text-black border border-gray-200 rounded-[8px] px-3 py-1.5 hover:bg-gray-50 hover:border-black/20 transition-all shadow-sm">Fix with AI</button>
-              </div>
-            </div>
-
-            <div className="flex gap-4 items-start group">
-              <div className="w-10 h-10 rounded-full bg-purple-50/50 border border-purple-100 flex items-center justify-center shrink-0 group-hover:bg-purple-50 group-hover:scale-105 transition-all">
-                <svg className="w-4 h-4 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" /></svg>
-              </div>
-              <div>
-                <h4 className="font-semibold text-black text-[14px] mb-1">Create discount code</h4>
-                <p className="text-[13px] font-medium text-gray-500 mb-2 leading-relaxed">Incentivize your first buyers by offering a small welcome discount.</p>
-                <button className="text-[12px] font-semibold text-black border border-gray-200 rounded-[8px] px-3 py-1.5 hover:bg-gray-50 hover:border-black/20 transition-all shadow-sm">Create code</button>
-              </div>
-            </div>
-
           </div>
         </div>
-
       </div>
 
-      {/* Subscription Modal */}
-      {showSubscriptionModal && (
-        <>
-          {(subscriptionStep === 'pay-per-tx-success' || subscriptionStep === 'success') && (
-            <div className="fixed inset-0 z-[110] pointer-events-none">
-              <Confetti width={width} height={height} recycle={false} numberOfPieces={400} />
-            </div>
-          )}
-          <div className="fixed inset-0 bg-black/40 z-[100] backdrop-blur-sm animate-in fade-in duration-300 overflow-y-auto">
-            <div className="flex min-h-full items-center justify-center p-4">
-              <div className={`bg-white rounded-[32px] w-full ${subscriptionStep === 'choose' ? 'max-w-[1000px]' : 'max-w-[420px]'} overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 relative my-4`}>
-
-                {subscriptionStep === 'choose' && (
-                  <div className="p-8 md:p-10 animate-in slide-in-from-bottom-4 duration-500">
-                    <div className="text-center max-w-2xl mx-auto mb-10">
-                      <h2 className="text-3xl md:text-4xl font-bold text-black tracking-tight mb-4">Choose Your Plan</h2>
-                      <p className="text-gray-500 font-medium text-[16px] leading-relaxed mb-8">
-                        Select the best plan for your business to unlock premium features and increase your sales.
-                      </p>
-                      
-                      {/* Currency & Billing Controllers */}
-                      <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8 mb-4">
-                        {/* Currency Toggle */}
-                        <div className="flex items-center gap-2 bg-gray-50 p-1.5 rounded-2xl border border-gray-100 shadow-inner">
-                          <button 
-                            onClick={() => setPaymentCurrency('NGN')}
-                            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-[15px] font-bold transition-all ${paymentCurrency === 'NGN' ? 'bg-white text-black shadow-md ring-1 ring-gray-200 scale-[1.02]' : 'text-gray-400 hover:text-black hover:bg-white/50'}`}
-                          >
-                            <span className="text-xl leading-none">🇳🇬</span> NGN
-                          </button>
-                          <button 
-                            onClick={() => setPaymentCurrency('USD')}
-                            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-[15px] font-bold transition-all ${paymentCurrency === 'USD' ? 'bg-white text-black shadow-md ring-1 ring-gray-200 scale-[1.02]' : 'text-gray-400 hover:text-black hover:bg-white/50'}`}
-                          >
-                            <span className="text-xl leading-none">🇺🇸</span> USD
-                          </button>
-                        </div>
-
-                        <div className="w-px h-10 bg-gray-200 hidden md:block"></div>
-
-                        {/* Billing Toggle */}
-                        <div className="flex items-center gap-2 bg-emerald-50/50 p-1.5 rounded-2xl border border-emerald-100/50 shadow-inner">
-                          <button 
-                            onClick={() => setBillingInterval('monthly')}
-                            className={`px-6 py-2.5 rounded-xl text-[15px] font-bold transition-all ${billingInterval === 'monthly' ? 'bg-white text-gray-900 shadow-md ring-1 ring-emerald-100 scale-[1.02]' : 'text-emerald-700/60 hover:text-emerald-800 hover:bg-white/50'}`}
-                          >
-                            Monthly
-                          </button>
-                          <button 
-                            onClick={() => setBillingInterval('annually')}
-                            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-[15px] font-bold transition-all ${billingInterval === 'annually' ? 'bg-white text-gray-900 shadow-md ring-1 ring-emerald-100 scale-[1.02]' : 'text-emerald-700/60 hover:text-emerald-800 hover:bg-white/50'}`}
-                          >
-                            Annually
-                            <span className={`px-2 py-0.5 rounded-md text-[11px] font-black tracking-wide uppercase ${billingInterval === 'annually' ? 'bg-emerald-500 text-white shadow-sm' : 'bg-emerald-100 text-emerald-700'}`}>Save 20%</span>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      {subscriptionPlans.map((plan: any) => (
-                        <div key={plan.id} className={`relative flex flex-col p-6 lg:p-8 rounded-[24px] border-2 transition-all ${plan.isPopular ? 'border-black bg-white shadow-xl scale-[1.02]' : 'border-gray-100 bg-white hover:border-gray-300'}`}>
-                          {plan.isPopular && (
-                            <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-black text-white px-4 py-1.5 rounded-full text-[12px] font-bold tracking-widest uppercase">
-                              Most Popular
-                            </div>
-                          )}
-                          
-                          <div className="mb-6">
-                            <h3 className="text-[22px] font-bold text-black mb-2">{plan.plan_name}</h3>
-                            <p className="text-[14px] text-gray-500 font-medium min-h-[42px]">{plan.description}</p>
-                          </div>
-                          
-                          <div className="mb-8">
-                            <div className="flex items-baseline gap-1">
-                              <span className="text-[40px] font-bold tracking-tight text-black leading-none">
-                                {paymentCurrency === 'NGN' ? '₦' : '$'}
-                                {paymentCurrency === 'NGN' ? plan.price[billingInterval].toLocaleString() : plan.priceUsd[billingInterval]}
-                              </span>
-                              <span className="text-gray-500 font-medium text-sm">/{billingInterval === 'monthly' ? 'mo' : 'yr'}</span>
-                            </div>
-                            {billingInterval === 'annually' && (
-                              <div className="mt-2 text-[13px] font-medium text-emerald-600">
-                                Billed annually ({paymentCurrency === 'NGN' ? '₦' : '$'}
-                                {paymentCurrency === 'NGN' ? plan.price.annually.toLocaleString() : plan.priceUsd.annually}/year)
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="space-y-4 flex-1">
-                            <div className="flex items-start gap-3">
-                              <svg className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                              <span className="text-[14.5px] font-medium text-gray-700">{plan.features.max_orders === 'unlimited' ? 'Unlimited' : plan.features.max_orders} orders</span>
-                            </div>
-                            <div className="flex items-start gap-3">
-                              <svg className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                              <span className="text-[14.5px] font-medium text-gray-700">{plan.features.max_products === 'unlimited' ? 'Unlimited' : plan.features.max_products} products</span>
-                            </div>
-                            
-                            <div className={`flex items-start gap-3 ${plan.features.ai_assistant ? '' : 'opacity-40 grayscale'}`}>
-                              {plan.features.ai_assistant ? (
-                                <svg className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                              ) : (
-                                <svg className="w-5 h-5 text-gray-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                              )}
-                              <span className="text-[14.5px] font-medium text-gray-700">AI Assistant</span>
-                            </div>
-
-                            <div className={`flex items-start gap-3 ${plan.features.broadcast_message ? '' : 'opacity-40 grayscale'}`}>
-                              {plan.features.broadcast_message ? (
-                                <svg className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                              ) : (
-                                <svg className="w-5 h-5 text-gray-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                              )}
-                              <span className="text-[14.5px] font-medium text-gray-700">Broadcast Messages</span>
-                            </div>
-                            
-                            <div className={`flex items-start gap-3 ${plan.features.free_transaction_processing ? '' : 'opacity-40 grayscale'}`}>
-                              {plan.features.free_transaction_processing ? (
-                                <svg className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                              ) : (
-                                <svg className="w-5 h-5 text-gray-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                              )}
-                              <span className="text-[14.5px] font-medium text-gray-700">Free transaction processing</span>
-                            </div>
-
-                            <div className={`flex items-start gap-3 ${plan.features.image_generation ? '' : 'opacity-40 grayscale'}`}>
-                              {plan.features.image_generation ? (
-                                <svg className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                              ) : (
-                                <svg className="w-5 h-5 text-gray-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                              )}
-                              <span className="text-[14.5px] font-medium text-gray-700">AI Image Generation</span>
-                            </div>
-
-                            <div className="flex items-start gap-3">
-                              <svg className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                              <span className="text-[14.5px] font-medium text-gray-700 tracking-wide capitalize">{plan.features.support} Support</span>
-                            </div>
-                          </div>
-
-                          <PlanPayButton plan={plan} billing={billingInterval} profile={profile} currency={paymentCurrency} onSuccess={handlePlanSuccess} />
-                        </div>
-                      ))}
-                    </div>
-                    
-                    <div className="mt-10 pt-8 border-t border-gray-100 flex flex-col md:flex-row items-center justify-between gap-6 bg-gray-50/80 -mx-8 md:-mx-10 -mb-8 md:-mb-10 p-8 md:px-10 md:py-8 rounded-b-[32px]">
-                      <div className="text-center md:text-left">
-                        <h4 className="text-[17px] font-bold text-black">Not ready for a subscription?</h4>
-                        <p className="text-[14px] text-gray-500 font-medium mt-1">Start completely free. We only charge 2% when you make a sale.</p>
-                      </div>
-                      <button
-                        onClick={handlePayPerTx}
-                        className="text-[15px] font-bold text-gray-700 hover:text-black transition-all border-2 border-gray-200 px-8 py-3.5 rounded-xl hover:bg-white hover:border-gray-300 shadow-sm whitespace-nowrap bg-gray-100/50"
-                      >
-                        Skip & Pay-Per-Sale
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {(subscriptionStep === 'pay-per-tx-success' || subscriptionStep === 'success') && (
-                  <div className="p-8 pt-12 pb-12 text-center animate-in zoom-in-95 duration-500">
-                    <div className="w-24 h-24 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-8">
-                      <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                    </div>
-                    <h2 className="text-[32px] font-bold text-black tracking-tight mb-4">Congratulations!</h2>
-                    <p className="text-gray-500 font-medium text-[16px] leading-relaxed mb-8 max-w-sm mx-auto">
-                      {subscriptionStep === 'pay-per-tx-success'
-                        ? "You can now continue enjoying the platform and doing transactions seamlessly."
-                        : "You have successfully updated your subscription. Enjoy full access to premium features!"}
-                    </p>
-                    <button
-                      onClick={() => setShowSubscriptionModal(false)}
-                      className="w-full max-w-xs mx-auto block py-4 rounded-xl bg-black text-white font-bold text-[16px] hover:bg-gray-800 hover:-translate-y-1 transition-all shadow-xl"
-                    >
-                      Continue to Dashboard
-                    </button>
-                  </div>
-                )}
-
-                {subscriptionStep === 'choose' && (
-                  <div className="absolute top-6 right-6 z-10">
-                    <button
-                      onClick={() => setShowSubscriptionModal(false)}
-                      className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 hover:bg-gray-200 hover:text-black transition-all"
-                    >
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                    </button>
-                  </div>
-                )}
-              </div>
+      {/* AI Intelligence Hub */}
+      <div className="bg-gray-50 rounded-[50px] p-10 md:p-16 border-2 border-gray-100 relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 via-purple-500 to-emerald-400"></div>
+        <div className="flex flex-col md:flex-row items-start justify-between gap-12 relative z-10">
+          <div className="max-w-md">
+            <h3 className="text-3xl font-black text-black tracking-tight mb-4">AI Intelligence insights</h3>
+            <p className="text-gray-500 font-medium leading-relaxed mb-8">Our AI engine analyzed your store data and found these immediate growth opportunities for you.</p>
+            <div className="flex items-center gap-3 px-4 py-2 bg-white rounded-full border border-gray-200 w-fit">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span className="text-xs font-bold text-black uppercase tracking-widest">System Active</span>
             </div>
           </div>
-        </>
-      )}
-      {/* Broadcast Modal */}
+
+          <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-6">
+             <div className="bg-white p-8 rounded-[32px] border-2 border-transparent hover:border-blue-200 transition-all group">
+                <div className="w-10 h-10 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></div>
+                <h4 className="font-bold text-black mb-1">Product SEO</h4>
+                <p className="text-gray-400 text-sm font-medium mb-4">3 products have limited descriptions. Longer descriptions increase sales.</p>
+                <button className="px-4 py-2 bg-gray-50 text-black text-xs font-bold rounded-lg hover:bg-black hover:text-white transition-all">Fix with AI</button>
+             </div>
+             <div className="bg-white p-8 rounded-[32px] border-2 border-transparent hover:border-purple-200 transition-all group">
+                <div className="w-10 h-10 bg-purple-50 text-purple-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg></div>
+                <h4 className="font-bold text-black mb-1">Domain Status</h4>
+                <p className="text-gray-400 text-sm font-medium mb-4">Adding a custom domain increases customer trust by up to 40%.</p>
+                <button className="px-4 py-2 bg-gray-50 text-black text-xs font-bold rounded-lg hover:bg-black hover:text-white transition-all">Setup Guide</button>
+             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Broadcast Modal Component */}
       {showBroadcastModal && (
-        <div className="fixed inset-0 bg-black/40 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white rounded-[32px] w-full max-w-[500px] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 relative">
+        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-xl animate-in fade-in duration-300">
+          <div className="bg-white rounded-[40px] w-full max-w-[540px] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 relative border-2 border-white/20">
             
             {broadcastSuccess && (
-              <div className="absolute inset-0 z-[110] pointer-events-none flex items-center justify-center bg-white/90 backdrop-blur-sm animate-in fade-in duration-500">
+              <div className="absolute inset-0 z-[110] pointer-events-none flex items-center justify-center bg-white/95 backdrop-blur-sm animate-in fade-in duration-500">
                 <Confetti width={500} height={500} recycle={false} numberOfPieces={200} />
-                <div className="text-center">
-                  <div className="w-20 h-20 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 scale-110 animate-bounce">
-                    <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                <div className="text-center px-10">
+                  <div className="w-24 h-24 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 scale-110 animate-bounce">
+                    <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                   </div>
-                  <h2 className="text-2xl font-bold text-black">Message Sent!</h2>
-                  <p className="text-gray-500 font-medium mt-2">Your broadcast is on its way to customers.</p>
+                  <h2 className="text-3xl font-black text-black">Broadcast Active!</h2>
+                  <p className="text-gray-500 font-bold mt-2 leading-relaxed">Your message is being distributed to your entire customer base right now.</p>
                 </div>
               </div>
             )}
 
-            <div className="p-8">
-              <div className="flex items-center justify-between mb-8">
-                <div>
-                  <h2 className="text-2xl font-bold text-black tracking-tight">Broadcast Message</h2>
-                  <p className="text-gray-500 font-medium text-sm mt-1">Send a notification to all your customers.</p>
+            <div className="p-12">
+              <div className="flex items-center justify-between mb-10">
+                <div className="space-y-1">
+                  <h2 className="text-3xl font-black text-black tracking-tight">Broadcast Center</h2>
+                  <p className="text-gray-400 font-bold text-xs uppercase tracking-widest">Connect with your audience</p>
                 </div>
                 <button 
                   onClick={() => setShowBroadcastModal(false)}
-                  className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-black transition-all"
+                  className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center text-gray-400 hover:bg-rose-50 hover:text-rose-500 transition-all"
                 >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
               </div>
 
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2 px-1">Message Content</label>
+              <div className="space-y-10">
+                <div className="space-y-4">
+                  <label className="block text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] px-1">Message Protocol</label>
                   <textarea
                     value={broadcastMessage}
                     onChange={(e) => setBroadcastMessage(e.target.value)}
-                    placeholder="Type your message here... e.g. 'New collection just dropped! Check it out now.'"
-                    className="w-full bg-gray-50 border-2 border-gray-100 focus:border-black focus:bg-white rounded-2xl p-5 text-lg font-medium outline-none transition-all h-40 resize-none placeholder:text-gray-300"
+                    placeholder="E.g. '20% Off everything starting now! Tap to shop...'"
+                    className="w-full bg-gray-50 border-2 border-gray-100 focus:border-black focus:bg-white rounded-[24px] p-8 text-xl font-bold outline-none transition-all h-52 resize-none placeholder:text-gray-200"
                   />
-                  <div className="flex justify-between mt-2 px-1">
-                    <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{broadcastMessage.length} characters</span>
-                    <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Sent to all customers</span>
+                  <div className="flex justify-between mt-4 px-2">
+                    <span className="text-[11px] font-black text-gray-300 uppercase tracking-widest">{broadcastMessage.length} / 500 chars</span>
+                    <span className="text-[11px] font-black text-emerald-500 uppercase tracking-widest">Targeting All Verified Customers</span>
                   </div>
                 </div>
 
-                <div className="pt-2">
-                  <button
-                    onClick={handleBroadcast}
-                    disabled={isBroadcasting || !broadcastMessage.trim()}
-                    className="w-full bg-black text-white py-5 rounded-2xl text-xl font-bold hover:bg-gray-800 transition-all shadow-xl disabled:opacity-50 disabled:translate-y-0 hover:-translate-y-1 flex items-center justify-center gap-3 group"
-                  >
-                    {isBroadcasting ? (
-                      <>
-                        <div className="w-5 h-5 border-3 border-white/20 border-t-white rounded-full animate-spin" />
-                        Sending...
-                      </>
-                    ) : (
-                      <>
-                        Send Broadcast
-                        <svg className="w-5 h-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
-                      </>
-                    )}
-                  </button>
-                </div>
+                <button
+                  onClick={handleBroadcast}
+                  disabled={isBroadcasting || !broadcastMessage.trim()}
+                  className="w-full bg-black text-white py-6 rounded-[24px] text-xl font-bold hover:bg-gray-800 transition-all shadow-2xl disabled:opacity-50 hover:-translate-y-1 flex items-center justify-center gap-4 group h-[76px]"
+                >
+                  {isBroadcasting ? (
+                    <>
+                      <div className="w-6 h-6 border-3 border-white/20 border-t-white rounded-full animate-spin" />
+                      Synchronizing...
+                    </>
+                  ) : (
+                    <>
+                      Initiate Broadcast
+                      <svg className="w-6 h-6 group-hover:translate-x-2 group-hover:-translate-y-2 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+                    </>
+                  )}
+                </button>
               </div>
             </div>
           </div>
         </div>
       )}
     </div>
+    </AuthGuard>
   );
 }

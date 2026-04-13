@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { QRCodeSVG } from 'qrcode.react';
+import QRCode from 'qrcode';
 
 interface QRCodeModalProps {
   isOpen: boolean;
@@ -16,7 +16,23 @@ export default function QRCodeModal({ isOpen, onClose, storeName, storeUrl }: QR
   const [message, setMessage] = useState('SCAN ME');
   const [subMessage, setSubMessage] = useState('Hold the camera to the image');
   const [isDownloading, setIsDownloading] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState('');
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Generate QR preview whenever URL or colors change
+  useEffect(() => {
+    if (storeUrl) {
+      QRCode.toDataURL(storeUrl, {
+        width: 1000,
+        margin: 1,
+        color: {
+          dark: fgColor,
+          light: '#ffffff00' // Transparent
+        },
+        errorCorrectionLevel: 'H'
+      }).then(setQrDataUrl);
+    }
+  }, [storeUrl, fgColor]);
 
   const handleDownload = async () => {
     setIsDownloading(true);
@@ -86,25 +102,29 @@ export default function QRCodeModal({ isOpen, onClose, storeName, storeUrl }: QR
       roundRect(innerMargin, 600, innerW, innerH, 80);
       ctx.fill();
 
-      // 5. Render QR Code to the canvas
-      const svgElement = document.getElementById('qr-preview-svg') as unknown as SVGSVGElement;
-      if (svgElement) {
-        const svgData = new XMLSerializer().serializeToString(svgElement);
-        const svgBase64 = `data:image/svg+xml;base64,${btoa(svgData)}`;
-        
-        const img = new Image();
-        img.src = svgBase64;
-        
-        await new Promise((resolve) => {
-          img.onload = () => {
-            const qrSize = 1400;
-            const x = (width - qrSize) / 2;
-            const y = 800; // Positioned inside the white box
-            ctx.drawImage(img, x, y, qrSize, qrSize);
-            resolve(true);
-          };
-        });
-      }
+      // 5. Draw the High-Res QR code
+      const qrImage = new Image();
+      // Generate a fresh high-res DataURL specifically for the canvas
+      const highResQr = await QRCode.toDataURL(storeUrl, {
+        width: 1400,
+        margin: 1,
+        color: {
+          dark: fgColor,
+          light: '#ffffff'
+        },
+        errorCorrectionLevel: 'H'
+      });
+      qrImage.src = highResQr;
+      
+      await new Promise((resolve) => {
+        qrImage.onload = () => {
+          const qrSize = 1400;
+          const x = (width - qrSize) / 2;
+          const y = 800; // Positioned inside the white box
+          ctx.drawImage(qrImage, x, y, qrSize, qrSize);
+          resolve(true);
+        };
+      });
 
       // 6. Trigger download
       const link = document.createElement('a');
@@ -159,15 +179,12 @@ export default function QRCodeModal({ isOpen, onClose, storeName, storeUrl }: QR
                   </div>
 
                   {/* QR Box */}
-                  <div className="flex-1 bg-white m-4 mt-0 rounded-2xl p-6 flex items-center justify-center">
-                    <QRCodeSVG 
-                      id="qr-preview-svg"
-                      value={storeUrl} 
-                      size={200}
-                      fgColor={fgColor}
-                      bgColor="transparent"
-                      level="H"
-                    />
+                  <div className="flex-1 bg-white m-4 mt-0 rounded-2xl p-6 flex items-center justify-center overflow-hidden">
+                    {qrDataUrl ? (
+                      <img src={qrDataUrl} alt="QR Preview" className="w-[80%] h-auto" />
+                    ) : (
+                      <div className="w-10 h-10 border-2 border-black/10 border-t-black rounded-full animate-spin" />
+                    )}
                   </div>
                </div>
                <p className="mt-6 text-gray-400 text-xs font-semibold uppercase tracking-widest">Branded Card Preview</p>

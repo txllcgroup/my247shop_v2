@@ -1,3 +1,5 @@
+import ApiClient from '@/lib/apiClient';
+
 export interface ProductVariant {
   id?: string;
   name: string;
@@ -34,41 +36,14 @@ export interface ProductData {
 
 export class ProductService {
   static async createProduct(data: ProductData) {
-    const res = await fetch('https://my247v2.airshop247.com/api/products', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(data)
-    });
-
-    if (!res.ok) {
-      const errRes = await res.json();
-      throw new Error(errRes.message || 'Failed to create product');
-    }
-
-    return await res.json();
+    return ApiClient.post('/products', data);
   }
 
   static async uploadImage(file: File) {
     const uploadData = new FormData();
     uploadData.append('file', file);
     
-    // Per USER_REQUEST: Use https://localhost:7050/api/filemanager/upload for file upload?
-    // Wait, the user provided a curl for localhost in the latest message, but 
-    // earlier onboarding used https://my247v2.airshop247.com/api/filemanager/upload.
-    // I'll try to use the one provided in the latest message if I'm in a local dev context, 
-    // but the create product API is on production. 
-    // Actually, usually it's better to stick to one. 
-    // The user's curl says: https://localhost:7050/api/filemanager/upload.
-    // I will use that for now or maybe a variable.
-    
-    const res = await fetch('https://my247v2.airshop247.com/api/filemanager/upload', {
-      method: 'POST',
-      body: uploadData,
-    });
-    
-    const data = await res.json();
+    const data = await ApiClient.post('/filemanager/upload', uploadData);
     if (data.success) {
       return data.fileUrl;
     } else {
@@ -85,180 +60,74 @@ export class ProductService {
     if (params.page) query.append('page', String(params.page));
     if (params.pageSize) query.append('pageSize', String(params.pageSize));
 
-    const res = await fetch(`https://my247v2.airshop247.com/api/products/store/${storeId}?${query.toString()}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (!res.ok) {
-      throw new Error('Failed to fetch products');
-    }
-
-    return await res.json();
+    return ApiClient.get(`/products/store/${storeId}?${query.toString()}`);
   }
 
   static async getProduct(id: string) {
-    const res = await fetch(`https://my247v2.airshop247.com/api/products/${id}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (!res.ok) {
-      throw new Error('Failed to fetch product');
-    }
-
-    return await res.json();
+    return ApiClient.get(`/products/${id}`);
   }
 
   static async updateProduct(id: string, data: Partial<ProductData>) {
-    const res = await fetch(`https://my247v2.airshop247.com/api/products/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(data)
-    });
-
-    if (!res.ok) {
-      throw new Error('Failed to update product');
-    }
-
-    return await res.json();
+    return ApiClient.put(`/products/${id}`, data);
   }
 
   static async deleteProduct(id: string) {
-    const res = await fetch(`https://my247v2.airshop247.com/api/products/${id}`, {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (!res.ok) {
-      throw new Error('Failed to delete product');
-    }
-
-    return await res.json();
+    return ApiClient.delete(`/products/${id}`);
   }
 
   static async publishProduct(id: string) {
-    const res = await fetch(`https://my247v2.airshop247.com/api/products/${id}/publish`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' }
-    });
-    if (!res.ok) throw new Error('Failed to publish product');
-    return await res.json();
+    return ApiClient.patch(`/products/${id}/publish`);
   }
 
   static async unpublishProduct(id: string) {
-    const res = await fetch(`https://my247v2.airshop247.com/api/products/${id}/unpublish`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' }
-    });
-    if (!res.ok) throw new Error('Failed to unpublish product');
-    return await res.json();
+    return ApiClient.patch(`/products/${id}/unpublish`);
   }
 
   static async archiveProduct(id: string) {
-    const res = await fetch(`https://my247v2.airshop247.com/api/products/${id}/archive`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' }
-    });
-    if (!res.ok) throw new Error('Failed to archive product');
-    return await res.json();
+    return ApiClient.patch(`/products/${id}/archive`);
   }
 
   static async updateStock(id: string, stockQuantity: number) {
-    const res = await fetch(`https://my247v2.airshop247.com/api/products/${id}/stock`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ stockQuantity })
-    });
-    if (!res.ok) throw new Error('Failed to update stock');
-    return await res.json();
+    return ApiClient.patch(`/products/${id}/stock`, { stockQuantity });
   }
 
   static async adjustStock(id: string, quantity: number) {
-    const res = await fetch(`https://my247v2.airshop247.com/api/products/${id}/adjust-stock`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ quantity })
-    });
-    if (!res.ok) throw new Error('Failed to adjust stock');
-    return await res.json();
+    return ApiClient.patch(`/products/${id}/adjust-stock`, { quantity });
   }
 
   static async updateImages(id: string, imageUrls: string[]) {
-    const res = await fetch(`https://my247v2.airshop247.com/api/products/${id}/images`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ imageUrls })
-    });
-    if (!res.ok) throw new Error('Failed to update images');
-    return await res.json();
+    return ApiClient.patch(`/products/${id}/images`, { imageUrls });
   }
 
   static async deleteImage(id: string, imageUrl: string) {
-    const res = await fetch(`https://my247v2.airshop247.com/api/products/${id}/images`, {
+    return ApiClient.request(`/products/${id}/images`, {
       method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ imageUrl })
     });
-    if (!res.ok) throw new Error('Failed to delete image');
-    return await res.json();
   }
 
   static async addVariant(id: string, variant: ProductVariant) {
-    const res = await fetch(`https://my247v2.airshop247.com/api/products/${id}/variants`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(variant)
-    });
-    if (!res.ok) throw new Error('Failed to add variant');
-    return await res.json();
+    return ApiClient.post(`/products/${id}/variants`, variant);
   }
 
   static async updateVariant(productId: string, variantId: string, variant: ProductVariant) {
-    const res = await fetch(`https://my247v2.airshop247.com/api/products/${productId}/variants/${variantId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(variant)
-    });
-    if (!res.ok) throw new Error('Failed to update variant');
-    return await res.json();
+    return ApiClient.put(`/products/${productId}/variants/${variantId}`, variant);
   }
 
   static async deleteVariant(productId: string, variantId: string) {
-    const res = await fetch(`https://my247v2.airshop247.com/api/products/${productId}/variants/${variantId}`, {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' }
-    });
-    if (!res.ok) throw new Error('Failed to delete variant');
-    return await res.json();
+    return ApiClient.delete(`/products/${productId}/variants/${variantId}`);
   }
 
   static async generateProductContent(params: { productName: string, currency: string, storeCategoryHint?: string }) {
-    const res = await fetch('https://my247v2.airshop247.com/api/product-content-ai/generate', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        productName: params.productName,
-        currency: params.currency,
-        storeCategoryHint: params.storeCategoryHint || ""
-      })
-    });
+    return ApiClient.post('/product-content-ai/generate', params);
+  }
 
-    if (!res.ok) {
-      const errorMsg = await res.text();
-      throw new Error(errorMsg || 'Failed to generate content');
-    }
-
-    return await res.json();
+  static async optimizeImage(image: File | Blob, description: string) {
+    const formData = new FormData();
+    formData.append('Image', image);
+    formData.append('Description', description);
+    
+    return ApiClient.post('/image-generation-ai/optimize', formData);
   }
 }
+

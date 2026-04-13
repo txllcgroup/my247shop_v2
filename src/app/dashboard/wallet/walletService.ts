@@ -1,4 +1,4 @@
-const BASE_URL = 'https://my247v2.airshop247.com/api';
+import ApiClient from '@/lib/apiClient';
 
 export interface Wallet {
     id: string;
@@ -65,63 +65,32 @@ export interface BankAccountsResponse {
 }
 
 export class WalletService {
-    private static getHeaders(contentType = true) {
-        const token = localStorage.getItem('token');
-        const headers: any = {
-            'Authorization': `Bearer ${token}`
-        };
-        if (contentType) {
-            headers['Content-Type'] = 'application/json';
-        }
-        return headers;
-    }
-
     static async getWallet(storeId: string): Promise<WalletResponse> {
-        const response = await fetch(`${BASE_URL}/wallet/store/${storeId}`, {
-            headers: this.getHeaders(false)
-        });
-        return response.json();
+        return ApiClient.get(`/wallet/store/${storeId}`);
     }
 
     static async getTransactions(storeId: string, page = 1, pageSize = 20): Promise<TransactionsResponse> {
-        const response = await fetch(`${BASE_URL}/transactions/store/${storeId}?type=&category=&status=&search=&page=${page}&pageSize=${pageSize}`, {
-            headers: this.getHeaders(false)
-        });
-        return response.json();
+        return ApiClient.get(`/transactions/store/${storeId}?type=&category=&status=&search=&page=${page}&pageSize=${pageSize}`);
     }
 
     static async getBankAccounts(storeId: string): Promise<BankAccount[]> {
-        const response = await fetch(`${BASE_URL}/bankaccount/store/${storeId}`, {
-            headers: this.getHeaders(false)
-        });
-        return response.json();
+        return ApiClient.get(`/bankaccount/store/${storeId}`);
     }
 
     static async createBankAccount(data: { storeId: string; bankName: string; accountName: string; accountNumber: string }) {
-        const response = await fetch(`${BASE_URL}/bankaccount`, {
-            method: 'POST',
-            headers: this.getHeaders(true),
-            body: JSON.stringify(data)
-        });
-        if (!response.ok) return { success: false, status: response.status };
         try {
-            return await response.json();
-        } catch {
-            return { success: true };
+            return await ApiClient.post('/bankaccount', data);
+        } catch (error: any) {
+            return { success: false, status: error.message };
         }
     }
 
     static async updateBankAccount(data: { accountId: string; bankName: string; accountName: string; accountNumber: string }) {
-        const response = await fetch(`${BASE_URL}/bankaccount`, {
-            method: 'PUT',
-            headers: this.getHeaders(true),
-            body: JSON.stringify(data)
-        });
-        if (!response.ok) return { success: false, status: response.status };
         try {
-            return await response.json();
-        } catch {
-            return { success: true };
+            return await ApiClient.put('/bankaccount', data);
+        } catch (error: any) {
+            return { success: false, status: error.message };
         }
     }
 }
+

@@ -1,3 +1,5 @@
+import ApiClient from '@/lib/apiClient';
+
 export interface OrderItem {
     productId: string;
     productName: string;
@@ -86,16 +88,6 @@ export interface OrderFilters {
 }
 
 export class OrderService {
-    private static BASE_URL = 'https://my247v2.airshop247.com/api';
-
-    private static getHeaders() {
-        const token = localStorage.getItem('token');
-        return {
-            'Content-Type': 'application/json',
-            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        };
-    }
-
     static async getOrders(storeId: string, filters: OrderFilters = {}): Promise<OrdersResponse> {
         const queryParams = new URLSearchParams();
         if (filters.status && filters.status !== 'All') queryParams.append('status', filters.status);
@@ -106,102 +98,31 @@ export class OrderService {
         queryParams.append('page', (filters.page || 1).toString());
         queryParams.append('pageSize', (filters.pageSize || 20).toString());
 
-        const res = await fetch(`${OrderService.BASE_URL}/orders/store/${storeId}?${queryParams.toString()}`, {
-            method: 'GET',
-            headers: OrderService.getHeaders()
-        });
-
-        if (!res.ok) {
-            const errorData = await res.json().catch(() => ({}));
-            throw new Error(errorData.message || 'Failed to fetch orders');
-        }
-
-        return await res.json();
+        return ApiClient.get(`/orders/store/${storeId}?${queryParams.toString()}`);
     }
 
     static async getOrderById(orderId: string): Promise<OrderDetailResponse> {
-        const res = await fetch(`${OrderService.BASE_URL}/orders/${orderId}`, {
-            method: 'GET',
-            headers: OrderService.getHeaders()
-        });
-
-        if (!res.ok) {
-            const errorData = await res.json().catch(() => ({}));
-            throw new Error(errorData.message || 'Failed to fetch order details');
-        }
-
-        return await res.json();
+        return ApiClient.get(`/orders/${orderId}`);
     }
 
     static async updateOrderStatus(orderId: string, status: string): Promise<OrderDetailResponse> {
-        const res = await fetch(`${OrderService.BASE_URL}/orders/${orderId}/status`, {
-            method: 'PATCH',
-            headers: OrderService.getHeaders(),
-            body: JSON.stringify({ status })
-        });
-
-        if (!res.ok) {
-            const errorData = await res.json().catch(() => ({}));
-            throw new Error(errorData.message || 'Failed to update order status');
-        }
-
-        return await res.json();
+        return ApiClient.patch(`/orders/${orderId}/status`, { status });
     }
 
     static async markOrderAsPaid(orderId: string, paymentData: { paymentMethod: string, reference: string }): Promise<OrderDetailResponse> {
-        const res = await fetch(`${OrderService.BASE_URL}/orders/${orderId}/mark-paid`, {
-            method: 'PATCH',
-            headers: OrderService.getHeaders(),
-            body: JSON.stringify(paymentData)
-        });
-
-        if (!res.ok) {
-            const errorData = await res.json().catch(() => ({}));
-            throw new Error(errorData.message || 'Failed to mark order as paid');
-        }
-
-        return await res.json();
+        return ApiClient.patch(`/orders/${orderId}/mark-paid`, paymentData);
     }
 
     static async cancelOrder(orderId: string): Promise<OrderDetailResponse> {
-        const res = await fetch(`${OrderService.BASE_URL}/orders/${orderId}/cancel`, {
-            method: 'PATCH',
-            headers: OrderService.getHeaders()
-        });
-
-        if (!res.ok) {
-            const errorData = await res.json().catch(() => ({}));
-            throw new Error(errorData.message || 'Failed to cancel order');
-        }
-
-        return await res.json();
+        return ApiClient.patch(`/orders/${orderId}/cancel`);
     }
 
     static async getOrderSummary(storeId: string): Promise<OrderSummaryResponse> {
-        const res = await fetch(`${OrderService.BASE_URL}/orders/store/${storeId}/summary`, {
-            method: 'GET',
-            headers: OrderService.getHeaders()
-        });
-
-        if (!res.ok) {
-            const errorData = await res.json().catch(() => ({}));
-            throw new Error(errorData.message || 'Failed to fetch order summary');
-        }
-
-        return await res.json();
+        return ApiClient.get(`/orders/store/${storeId}/summary`);
     }
 
     static async getRecentOrders(storeId: string, count = 10): Promise<RecentOrdersResponse> {
-        const res = await fetch(`${OrderService.BASE_URL}/orders/store/${storeId}/recent?count=${count}`, {
-            method: 'GET',
-            headers: OrderService.getHeaders()
-        });
-
-        if (!res.ok) {
-            const errorData = await res.json().catch(() => ({}));
-            throw new Error(errorData.message || 'Failed to fetch recent orders');
-        }
-
-        return await res.json();
+        return ApiClient.get(`/orders/store/${storeId}/recent?count=${count}`);
     }
 }
+
