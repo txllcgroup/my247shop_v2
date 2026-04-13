@@ -84,7 +84,7 @@ export default function ProductsPage() {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b-2 border-gray-200 pb-8">
         <div>
           <h1 className="text-3xl md:text-5xl font-medium tracking-tight text-black mb-4">Products</h1>
-          <p className="text-xl text-gray-500 font-medium max-w-xl">Manage your inventory, pricing, and product details.</p>
+          <p className="text-xl text-gray-500 font-medium max-w-xl">Manage your products, pricing, and product details.</p>
         </div>
         <div className="flex gap-4 flex-col sm:flex-row w-full md:w-auto">
           <Link href="/dashboard/products/add" className="w-full sm:w-auto bg-black text-white px-8 py-3 rounded-xl border-2 border-black text-base font-semibold hover:bg-gray-800 transition-colors inline-flex justify-center items-center gap-2 shadow-sm">
@@ -102,8 +102,8 @@ export default function ProductsPage() {
               key={tab}
               onClick={() => { setActiveTab(tab); setPage(1); }}
               className={`px-6 py-3 rounded-full text-base font-semibold whitespace-nowrap transition-colors border-2 ${activeTab === tab
-                  ? 'bg-black text-white border-black'
-                  : 'bg-white text-gray-600 border-gray-200 hover:border-black hover:text-black'
+                ? 'bg-black text-white border-black'
+                : 'bg-white text-gray-600 border-gray-200 hover:border-black hover:text-black'
                 }`}
             >
               {tab} {tab === 'All' && !isLoading && <span className={`ml-2 px-2.5 py-0.5 rounded-full text-sm ${activeTab === tab ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'}`}>{totalCount}</span>}
