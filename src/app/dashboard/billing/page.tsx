@@ -4,6 +4,12 @@ import dynamic from 'next/dynamic';
 import { BillingService, BillingWallet, BillingAnalytics, BillingTransaction } from './billingService';
 import { usePaystackPayment } from 'react-paystack-19';
 
+const CREDIT_BUNDLES = [
+  { id: 'starter', credits: 20000, discount: 10, label: 'Starter', priceNGN: 18000, priceUSD: 180 },
+  { id: 'pro', credits: 40000, discount: 15, label: 'Pro', priceNGN: 34000, priceUSD: 340 },
+  { id: 'enterprise', credits: 100000, discount: 20, label: 'Enterprise', priceNGN: 80000, priceUSD: 800 },
+];
+
 // Reusable styling for the massive floating inputs
 const FloatingInput = ({ label, type = "text", id, value = "", onChange, placeholder = "", prefix = "" }: any) => {
   const [isFocused, setIsFocused] = useState(false);
@@ -76,6 +82,7 @@ export default function BillingPage() {
   const [currency, setCurrency] = useState('NGN');
   const [profile, setProfile] = useState<any>(null);
   const [isFunding, setIsFunding] = useState(false);
+  const [selectedBundle, setSelectedBundle] = useState<any>(null);
 
   const fetchData = async () => {
     try {
@@ -112,11 +119,13 @@ export default function BillingPage() {
         amount: parseFloat(fundAmount),
         currency: currency,
         reference: reference,
-        description: fundDescription
+        description: fundDescription,
+        credits: selectedBundle ? selectedBundle.credits : undefined
       });
       alert("Wallet funded successfully!");
       setShowFundModal(false);
       setFundAmount('');
+      setSelectedBundle(null);
       fetchData();
     } catch (err: any) {
       alert("Failed to record funding: " + err.message);
@@ -147,10 +156,10 @@ export default function BillingPage() {
             quantity: 1
           }],
           currency: 'usd',
-          successUrl: `${window.location.origin}/dashboard/billing?status=success&amount=${fundAmount}&desc=${fundDescription}`,
+          successUrl: `${window.location.origin}/dashboard/billing?status=success&amount=${fundAmount}&desc=${fundDescription}${selectedBundle ? `&credits=${selectedBundle.credits}` : ''}`,
           cancelUrl: `${window.location.origin}/dashboard/billing?status=cancel`,
           customerEmail: profile?.email || "store@my247.com",
-          metadata: { type: 'billing_fund', description: fundDescription }
+          metadata: { type: 'billing_fund', description: fundDescription, credits: selectedBundle?.credits }
         })
       });
       const data = await res.json();
@@ -190,6 +199,7 @@ export default function BillingPage() {
     if (params.get('status') === 'success') {
       const amount = params.get('amount');
       const desc = params.get('desc');
+      const bundleCredits = params.get('credits');
       const ref = `STRIPE-${new Date().getTime()}`;
       if (amount && desc) {
         // Record the funding
@@ -197,7 +207,8 @@ export default function BillingPage() {
           amount: parseFloat(amount),
           currency: 'USD',
           reference: ref,
-          description: desc
+          description: desc,
+          credits: bundleCredits ? parseInt(bundleCredits) : undefined
         }).then(() => {
           alert("Wallet funded successfully!");
           window.history.replaceState(null, '', '/dashboard/billing');
@@ -362,13 +373,55 @@ export default function BillingPage() {
             <h2 className="text-3xl font-bold text-black tracking-tight mb-8">Fund Your Wallet</h2>
             
             <form onSubmit={handleFundSubmit} className="space-y-6">
+              {/* Bundle Selection */}
+              <div className="space-y-3">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Credit Bundles (Discounted)</label>
+                <div className="grid grid-cols-3 gap-3">
+                  {CREDIT_BUNDLES.map(bundle => {
+                    const price = currency === 'NGN' ? bundle.priceNGN : bundle.priceUSD;
+                    const isSelected = selectedBundle?.id === bundle.id;
+                    return (
+                      <button
+                        key={bundle.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedBundle(bundle);
+                          setFundAmount(price.toString());
+                          setFundDescription(`${bundle.label} Credit Bundle`);
+                        }}
+                        className={`flex flex-col items-center justify-center p-4 rounded-3xl border-2 transition-all gap-1 ${isSelected ? 'border-black bg-black text-white shadow-lg -translate-y-1' : 'border-gray-100 hover:border-gray-300 bg-gray-50/50'}`}
+                      >
+                        <span className="text-[10px] font-black uppercase tracking-tighter opacity-60">{bundle.label}</span>
+                        <span className="text-lg font-bold">{(bundle.credits/1000)}k</span>
+                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${isSelected ? 'bg-white/20 text-white' : 'bg-emerald-50 text-emerald-600'}`}>
+                          -{bundle.discount}%
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                  <div className="w-full border-t border-gray-100"></div>
+                </div>
+                <div className="relative flex justify-center text-xs uppercase font-bold text-gray-300">
+                  <span className="bg-white px-3">Or Custom Amount</span>
+                </div>
+              </div>
+
               <FloatingInput 
                 label="Amount" 
                 id="fundAmount" 
                 type="number" 
                 prefix={currency === 'NGN' ? '₦' : '$'}
                 value={fundAmount}
-                onChange={(e: any) => setFundAmount(e.target.value)}
+                onChange={(e: any) => {
+                  setFundAmount(e.target.value);
+                  setSelectedBundle(null);
+                  if (fundDescription.includes('Bundle')) setFundDescription('Credit Purchase');
+                }}
                 placeholder="0.00"
               />
               
@@ -383,7 +436,14 @@ export default function BillingPage() {
               <div className="p-6 bg-gray-50 rounded-3xl border-2 border-gray-100">
                 <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-200">
                   <span className="font-bold text-gray-500 uppercase tracking-widest text-[11px]">You will receive</span>
-                  <span className="font-bold text-black text-xl">{fundAmount ? (parseFloat(fundAmount) * (currency === 'NGN' ? 1 : 100)).toLocaleString() : '0'} Credits</span>
+                  <div className="flex flex-col items-end">
+                    <span className="font-bold text-black text-xl">
+                      {selectedBundle ? selectedBundle.credits.toLocaleString() : (fundAmount ? (parseFloat(fundAmount) * (currency === 'NGN' ? 1 : 100)).toLocaleString() : '0')} Credits
+                    </span>
+                    {selectedBundle && (
+                      <span className="text-[11px] font-bold text-emerald-600">Includes {(selectedBundle.credits - (parseFloat(fundAmount) * (currency === 'NGN' ? 1 : 100))).toLocaleString()} bonus credits</span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-start gap-3">
                   <div className="w-5 h-5 rounded-full bg-black flex items-center justify-center shrink-0 mt-0.5">

@@ -56,7 +56,7 @@ export class BillingService {
         return ApiClient.get('/Billing/wallet');
     }
 
-    static async fund(data: { amount: number; currency: string; reference: string; description: string }): Promise<{ message: string; balance: number }> {
+    static async fund(data: { amount: number; currency: string; reference: string; description: string; credits?: number }): Promise<{ message: string; balance: number }> {
         return ApiClient.post('/Billing/fund', data);
     }
 

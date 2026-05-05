@@ -28,8 +28,6 @@ export class OnboardingService {
     const uploadData = new FormData();
     uploadData.append('file', file);
     
-    // Note: The user requested "https://localhost:7050/api/filemanager/upload" earlier for file manager.
-    // However, they updated page.tsx to "https://my247v2.airshop247.com/api/filemanager/upload" recently in the diff.
     const res = await fetch('https://my247v2.airshop247.com/api/filemanager/upload', {
       method: 'POST',
       body: uploadData,
