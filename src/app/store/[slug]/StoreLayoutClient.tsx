@@ -6,7 +6,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { CustomerService } from '../../dashboard/customers/customerService';
 import { StorefrontService } from './storefrontService';
 import { CartProvider, useCart } from './cart/cartContext';
-import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 
 const FloatingInput = ({ label, id, value, onChange, type = "text", required = false }: any) => (
   <div className="relative group w-full text-black">
@@ -157,7 +156,6 @@ function StoreLayoutContent({ children, pathname, slug }: any) {
 
   return (
     <div className="min-h-screen bg-white text-black font-sans flex flex-col selection:bg-black selection:text-white text-black">
-      <PWAInstallPrompt name={store?.name} iconUrl={store?.logoUrl} />
       <div className="bg-black text-white text-sm font-semibold py-2 px-4 text-center">
         Free Shipping on all orders over $100!
       </div>

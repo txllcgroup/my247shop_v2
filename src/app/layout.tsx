@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -11,6 +12,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "My247Shop",
   description: "My247Shop E-commerce Application",
+  manifest: "/api/manifest/default",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -36,6 +38,7 @@ export default function RootLayout({
         className={`${inter.variable} antialiased`}
         suppressHydrationWarning
       >
+        <PWAInstallPrompt />
         {children}
       </body>
     </html>

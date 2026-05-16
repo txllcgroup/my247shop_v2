@@ -24,7 +24,7 @@ export async function GET() {
         src: '/pwa-icons/ios/180.png',
         sizes: '180x180',
         type: 'image/png',
-        purpose: 'maskable',
+        purpose: 'any maskable',
       },
     ],
   };
